@@ -2,7 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
-import "./IEvents.sol";
+import "./interfaces/ICommuneOS.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
@@ -13,7 +13,7 @@ import "./CollateralManager.sol";
 /// @title CommuneOS
 /// @notice Main contract integrating all commune management modules
 /// @dev Deployed on Gnosis Chain for low gas fees
-contract CommuneOS is IEvents {
+contract CommuneOS is ICommuneOS {
     CommuneRegistry public communeRegistry;
     MemberRegistry public memberRegistry;
     ChoreScheduler public choreScheduler;
@@ -62,14 +62,14 @@ contract CommuneOS is IEvents {
     /// @param signature The creator's signature
     function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
         // Validate the invite
-        require(communeRegistry.validateInvite(communeId, nonce, signature), "CommuneOS: invalid invite");
+        if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
 
         // Get commune details
         Commune memory commune = communeRegistry.getCommune(communeId);
 
         // Check collateral requirement
         if (commune.collateralRequired) {
-            require(msg.value >= commune.collateralAmount, "CommuneOS: insufficient collateral");
+            if (msg.value < commune.collateralAmount) revert InsufficientCollateral();
             collateralManager.depositCollateral{value: msg.value}(msg.sender);
         }
 
@@ -87,7 +87,7 @@ contract CommuneOS is IEvents {
     /// @param choreId The chore ID
     function markChoreComplete(uint256 communeId, uint256 choreId) external {
         // Verify member is part of commune
-        require(memberRegistry.isMember(communeId, msg.sender), "CommuneOS: not a member");
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
 
         // Mark chore complete
         choreScheduler.markChoreComplete(communeId, choreId);
@@ -108,10 +108,10 @@ contract CommuneOS is IEvents {
         address assignedTo
     ) external returns (uint256 expenseId) {
         // Verify creator is a member
-        require(memberRegistry.isMember(communeId, msg.sender), "CommuneOS: not a member");
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
 
         // Verify assignee is a member
-        require(memberRegistry.isMember(communeId, assignedTo), "CommuneOS: assignee not a member");
+        if (!memberRegistry.isMember(communeId, assignedTo)) revert AssigneeNotAMember();
 
         // Create expense
         return expenseManager.createExpense(communeId, amount, description, dueDate, assignedTo);
@@ -122,7 +122,7 @@ contract CommuneOS is IEvents {
     /// @param expenseId The expense ID
     function markExpensePaid(uint256 communeId, uint256 expenseId) external {
         // Verify member is part of commune
-        require(memberRegistry.isMember(communeId, msg.sender), "CommuneOS: not a member");
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
 
         expenseManager.markExpensePaid(expenseId);
     }
@@ -137,10 +137,10 @@ contract CommuneOS is IEvents {
         returns (uint256 disputeId)
     {
         // Verify member is part of commune
-        require(memberRegistry.isMember(communeId, msg.sender), "CommuneOS: not a member");
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
 
         // Verify new assignee is a member
-        require(memberRegistry.isMember(communeId, newAssignee), "CommuneOS: new assignee not a member");
+        if (!memberRegistry.isMember(communeId, newAssignee)) revert NewAssigneeNotAMember();
 
         // Create dispute
         disputeId = votingModule.createDispute(expenseId, newAssignee);
@@ -157,7 +157,7 @@ contract CommuneOS is IEvents {
     /// @param support True to support the dispute
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external {
         // Verify member is part of commune
-        require(memberRegistry.isMember(communeId, msg.sender), "CommuneOS: not a member");
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
 
         votingModule.voteOnDispute(disputeId, msg.sender, support);
     }

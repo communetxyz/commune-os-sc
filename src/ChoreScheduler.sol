@@ -2,12 +2,12 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
-import "./IEvents.sol";
+import "./interfaces/IChoreScheduler.sol";
 
 /// @title ChoreScheduler
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage
-contract ChoreScheduler is IEvents {
+contract ChoreScheduler is IChoreScheduler {
     // CommuneId => array of ChoreSchedules
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
 
@@ -18,12 +18,12 @@ contract ChoreScheduler is IEvents {
     /// @param communeId The commune ID
     /// @param schedules Array of chore schedules to initialize
     function initializeChores(uint256 communeId, ChoreSchedule[] memory schedules) external {
-        require(schedules.length > 0, "ChoreScheduler: no schedules provided");
-        require(choreSchedules[communeId].length == 0, "ChoreScheduler: already initialized");
+        if (schedules.length == 0) revert NoSchedulesProvided();
+        if (choreSchedules[communeId].length > 0) revert AlreadyInitialized();
 
         for (uint256 i = 0; i < schedules.length; i++) {
-            require(schedules[i].frequency > 0, "ChoreScheduler: invalid frequency");
-            require(bytes(schedules[i].title).length > 0, "ChoreScheduler: empty title");
+            if (schedules[i].frequency == 0) revert InvalidFrequency();
+            if (bytes(schedules[i].title).length == 0) revert EmptyTitle();
 
             ChoreSchedule memory schedule = ChoreSchedule({
                 id: i,
@@ -41,10 +41,10 @@ contract ChoreScheduler is IEvents {
     /// @param communeId The commune ID
     /// @param choreId The chore ID
     function markChoreComplete(uint256 communeId, uint256 choreId) external {
-        require(choreId < choreSchedules[communeId].length, "ChoreScheduler: invalid choreId");
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         uint256 period = getCurrentPeriod(communeId, choreId);
-        require(!completions[communeId][choreId][period], "ChoreScheduler: already completed");
+        if (completions[communeId][choreId][period]) revert AlreadyCompleted();
 
         completions[communeId][choreId][period] = true;
         emit ChoreCompleted(communeId, choreId, period, block.timestamp);
@@ -55,7 +55,7 @@ contract ChoreScheduler is IEvents {
     /// @param choreId The chore ID
     /// @return uint256 The current period number
     function getCurrentPeriod(uint256 communeId, uint256 choreId) public view returns (uint256) {
-        require(choreId < choreSchedules[communeId].length, "ChoreScheduler: invalid choreId");
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         ChoreSchedule memory schedule = choreSchedules[communeId][choreId];
         if (block.timestamp < schedule.startTime) {

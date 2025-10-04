@@ -2,11 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
-import "./IEvents.sol";
+import "./interfaces/ICommuneRegistry.sol";
 
 /// @title CommuneRegistry
 /// @notice Creates and manages communes with invite-based access
-contract CommuneRegistry is IEvents {
+contract CommuneRegistry is ICommuneRegistry {
     // CommuneId => Commune data
     mapping(uint256 => Commune) public communes;
 
@@ -25,11 +25,9 @@ contract CommuneRegistry is IEvents {
         external
         returns (uint256 communeId)
     {
-        require(bytes(name).length > 0, "CommuneRegistry: empty name");
-        require(creator != address(0), "CommuneRegistry: invalid creator");
-        if (collateralRequired) {
-            require(collateralAmount > 0, "CommuneRegistry: collateral amount must be positive");
-        }
+        if (bytes(name).length == 0) revert EmptyName();
+        if (creator == address(0)) revert InvalidCreator();
+        if (collateralRequired && collateralAmount == 0) revert InvalidCollateralAmount();
 
         communeId = communeCount++;
 
@@ -52,8 +50,8 @@ contract CommuneRegistry is IEvents {
     /// @param signature The signature from the creator
     /// @return bool True if valid
     function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature) external view returns (bool) {
-        require(communeId < communeCount, "CommuneRegistry: invalid communeId");
-        require(!usedNonces[communeId][nonce], "CommuneRegistry: nonce already used");
+        if (communeId >= communeCount) revert InvalidCommuneId();
+        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
 
         // Create the message hash
         bytes32 messageHash = getMessageHash(communeId, nonce);
@@ -70,8 +68,8 @@ contract CommuneRegistry is IEvents {
     /// @param communeId The commune ID
     /// @param nonce The nonce to mark as used
     function markNonceUsed(uint256 communeId, uint256 nonce) external {
-        require(communeId < communeCount, "CommuneRegistry: invalid communeId");
-        require(!usedNonces[communeId][nonce], "CommuneRegistry: nonce already used");
+        if (communeId >= communeCount) revert InvalidCommuneId();
+        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
         usedNonces[communeId][nonce] = true;
     }
 
@@ -79,7 +77,7 @@ contract CommuneRegistry is IEvents {
     /// @param communeId The commune ID
     /// @return Commune The commune data
     function getCommune(uint256 communeId) external view returns (Commune memory) {
-        require(communeId < communeCount, "CommuneRegistry: invalid communeId");
+        if (communeId >= communeCount) revert InvalidCommuneId();
         return communes[communeId];
     }
 
@@ -107,7 +105,7 @@ contract CommuneRegistry is IEvents {
     }
 
     function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
-        require(sig.length == 65, "CommuneRegistry: invalid signature length");
+        require(sig.length == 65, "Invalid signature length");
 
         assembly {
             r := mload(add(sig, 32))

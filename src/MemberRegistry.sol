@@ -2,11 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
-import "./IEvents.sol";
+import "./interfaces/IMemberRegistry.sol";
 
 /// @title MemberRegistry
 /// @notice Manages commune members and their status
-contract MemberRegistry is IEvents {
+contract MemberRegistry is IMemberRegistry {
     // CommuneId => array of member addresses
     mapping(uint256 => address[]) public communeMembers;
 
@@ -18,8 +18,8 @@ contract MemberRegistry is IEvents {
     /// @param memberAddress The member's address
     /// @param collateralAmount The collateral deposited
     function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) external {
-        require(memberAddress != address(0), "MemberRegistry: invalid address");
-        require(!members[memberAddress].active, "MemberRegistry: already registered");
+        if (memberAddress == address(0)) revert InvalidAddress();
+        if (members[memberAddress].active) revert AlreadyRegistered();
 
         members[memberAddress] = Member({
             walletAddress: memberAddress,

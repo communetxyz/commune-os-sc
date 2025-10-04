@@ -2,11 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
-import "./IEvents.sol";
+import "./interfaces/IVotingModule.sol";
 
 /// @title VotingModule
 /// @notice Manages voting on expense disputes
-contract VotingModule is IEvents {
+contract VotingModule is IVotingModule {
     // DisputeId => Dispute data
     mapping(uint256 => Dispute) public disputes;
 
@@ -23,7 +23,7 @@ contract VotingModule is IEvents {
     /// @param proposedNewAssignee The proposed new assignee
     /// @return disputeId The ID of the created dispute
     function createDispute(uint256 expenseId, address proposedNewAssignee) external returns (uint256 disputeId) {
-        require(proposedNewAssignee != address(0), "VotingModule: invalid assignee");
+        if (proposedNewAssignee == address(0)) revert InvalidAssignee();
 
         disputeId = disputeCount++;
 
@@ -46,9 +46,9 @@ contract VotingModule is IEvents {
     /// @param voter The address of the voter
     /// @param support True to support the dispute, false to reject
     function voteOnDispute(uint256 disputeId, address voter, bool support) external {
-        require(disputeId < disputeCount, "VotingModule: invalid disputeId");
-        require(!disputes[disputeId].resolved, "VotingModule: already resolved");
-        require(!hasVoted[disputeId][voter], "VotingModule: already voted");
+        if (disputeId >= disputeCount) revert InvalidDisputeId();
+        if (disputes[disputeId].resolved) revert AlreadyResolved();
+        if (hasVoted[disputeId][voter]) revert AlreadyVoted();
 
         hasVoted[disputeId][voter] = true;
         votes[disputeId][voter] = support;
@@ -67,14 +67,14 @@ contract VotingModule is IEvents {
     /// @param totalMembers Total number of commune members
     /// @return upheld True if dispute was upheld
     function resolveDispute(uint256 disputeId, uint256 totalMembers) external returns (bool upheld) {
-        require(disputeId < disputeCount, "VotingModule: invalid disputeId");
-        require(!disputes[disputeId].resolved, "VotingModule: already resolved");
+        if (disputeId >= disputeCount) revert InvalidDisputeId();
+        if (disputes[disputeId].resolved) revert AlreadyResolved();
 
         Dispute storage dispute = disputes[disputeId];
 
         // Simple majority: more than 50% of members voted in favor
         uint256 totalVotes = dispute.votesFor + dispute.votesAgainst;
-        require(totalVotes > 0, "VotingModule: no votes cast");
+        if (totalVotes == 0) revert NoVotesCast();
 
         upheld = dispute.votesFor > dispute.votesAgainst;
 
@@ -89,7 +89,7 @@ contract VotingModule is IEvents {
     /// @param disputeId The dispute ID
     /// @return Dispute The dispute data
     function getDispute(uint256 disputeId) external view returns (Dispute memory) {
-        require(disputeId < disputeCount, "VotingModule: invalid disputeId");
+        if (disputeId >= disputeCount) revert InvalidDisputeId();
         return disputes[disputeId];
     }
 
@@ -106,7 +106,7 @@ contract VotingModule is IEvents {
     /// @return votesFor Number of votes in favor
     /// @return votesAgainst Number of votes against
     function tallyVotes(uint256 disputeId) external view returns (uint256 votesFor, uint256 votesAgainst) {
-        require(disputeId < disputeCount, "VotingModule: invalid disputeId");
+        if (disputeId >= disputeCount) revert InvalidDisputeId();
         Dispute memory dispute = disputes[disputeId];
         return (dispute.votesFor, dispute.votesAgainst);
     }

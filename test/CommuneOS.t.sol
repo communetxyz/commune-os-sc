@@ -3,6 +3,7 @@ pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
 import "../src/CommuneOS.sol";
+import "../src/interfaces/ICommuneOS.sol";
 import "../src/Types.sol";
 
 contract CommuneOSTest is Test {
@@ -280,7 +281,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(member1);
 
         // Try to join with insufficient collateral
-        vm.expectRevert("CommuneOS: insufficient collateral");
+        vm.expectRevert(ICommuneOS.InsufficientCollateral.selector);
         communeOS.joinCommune{value: 0.5 ether}(communeId, nonce, signature);
 
         vm.stopPrank();

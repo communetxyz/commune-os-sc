@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./IEvents.sol";
+import "./interfaces/ICollateralManager.sol";
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
-contract CollateralManager is IEvents {
+contract CollateralManager is ICollateralManager {
     // Member address => collateral balance
     mapping(address => uint256) public collateralBalance;
 
     /// @notice Deposit collateral for a member
     /// @param member The member address
     function depositCollateral(address member) external payable {
-        require(msg.value > 0, "CollateralManager: must deposit positive amount");
+        if (msg.value == 0) revert InvalidDepositAmount();
         collateralBalance[member] += msg.value;
         emit CollateralDeposited(member, msg.value);
     }
@@ -32,7 +32,7 @@ contract CollateralManager is IEvents {
         if (actualSlashed > 0) {
             collateralBalance[member] -= actualSlashed;
             (bool success,) = recipient.call{value: actualSlashed}("");
-            require(success, "CollateralManager: transfer failed");
+            if (!success) revert TransferFailed();
             emit CollateralSlashed(member, actualSlashed, recipient);
         }
 

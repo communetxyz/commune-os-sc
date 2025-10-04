@@ -2,11 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
-import "./IEvents.sol";
+import "./interfaces/IExpenseManager.sol";
 
 /// @title ExpenseManager
 /// @notice Manages expense lifecycle including creation, assignment, payments, and disputes
-contract ExpenseManager is IEvents {
+contract ExpenseManager is IExpenseManager {
     // ExpenseId (global) => Expense
     mapping(uint256 => Expense) public expenses;
 
@@ -41,9 +41,9 @@ contract ExpenseManager is IEvents {
         uint256 dueDate,
         address assignedTo
     ) external returns (uint256 expenseId) {
-        require(assignedTo != address(0), "ExpenseManager: invalid assignee");
-        require(amount > 0, "ExpenseManager: amount must be positive");
-        require(bytes(description).length > 0, "ExpenseManager: empty description");
+        if (assignedTo == address(0)) revert InvalidAssignee();
+        if (amount == 0) revert InvalidAmount();
+        if (bytes(description).length == 0) revert EmptyDescription();
 
         expenseId = expenseCount++;
 
@@ -70,8 +70,8 @@ contract ExpenseManager is IEvents {
     /// @notice Mark an expense as paid
     /// @param expenseId The expense ID
     function markExpensePaid(uint256 expenseId) external {
-        require(expenseId < expenseCount, "ExpenseManager: invalid expenseId");
-        require(!expenses[expenseId].paid, "ExpenseManager: already paid");
+        if (expenseId >= expenseCount) revert InvalidExpenseId();
+        if (expenses[expenseId].paid) revert AlreadyPaid();
 
         expenses[expenseId].paid = true;
         expensePayments[expenseId][msg.sender] = true;
@@ -83,7 +83,7 @@ contract ExpenseManager is IEvents {
     /// @param expenseId The expense ID
     /// @param disputeId The dispute ID from VotingModule
     function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external {
-        require(expenseId < expenseCount, "ExpenseManager: invalid expenseId");
+        if (expenseId >= expenseCount) revert InvalidExpenseId();
 
         expenses[expenseId].disputed = true;
         expenseDisputes[expenseId] = disputeId;
@@ -95,8 +95,8 @@ contract ExpenseManager is IEvents {
     /// @param expenseId The expense ID
     /// @param newAssignee The new assignee
     function reassignExpense(uint256 expenseId, address newAssignee) external {
-        require(expenseId < expenseCount, "ExpenseManager: invalid expenseId");
-        require(newAssignee != address(0), "ExpenseManager: invalid assignee");
+        if (expenseId >= expenseCount) revert InvalidExpenseId();
+        if (newAssignee == address(0)) revert InvalidAssignee();
 
         address oldAssignee = expenses[expenseId].assignedTo;
 
@@ -111,7 +111,7 @@ contract ExpenseManager is IEvents {
     /// @param expenseId The expense ID
     /// @return bool True if paid
     function isExpensePaid(uint256 expenseId) external view returns (bool) {
-        require(expenseId < expenseCount, "ExpenseManager: invalid expenseId");
+        if (expenseId >= expenseCount) revert InvalidExpenseId();
         return expenses[expenseId].paid;
     }
 
@@ -119,7 +119,7 @@ contract ExpenseManager is IEvents {
     /// @param expenseId The expense ID
     /// @return Expense The expense data
     function getExpenseStatus(uint256 expenseId) external view returns (Expense memory) {
-        require(expenseId < expenseCount, "ExpenseManager: invalid expenseId");
+        if (expenseId >= expenseCount) revert InvalidExpenseId();
         return expenses[expenseId];
     }
 
@@ -141,7 +141,7 @@ contract ExpenseManager is IEvents {
     /// @param expenseId The expense ID
     /// @return address The assigned member
     function getExpenseAssignee(uint256 expenseId) external view returns (address) {
-        require(expenseId < expenseCount, "ExpenseManager: invalid expenseId");
+        if (expenseId >= expenseCount) revert InvalidExpenseId();
         return expenseAssignments[expenseId];
     }
 }
