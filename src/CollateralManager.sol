@@ -31,7 +31,7 @@ contract CollateralManager is IEvents {
 
         if (actualSlashed > 0) {
             collateralBalance[member] -= actualSlashed;
-            (bool success, ) = recipient.call{value: actualSlashed}("");
+            (bool success,) = recipient.call{value: actualSlashed}("");
             require(success, "CollateralManager: transfer failed");
             emit CollateralSlashed(member, actualSlashed, recipient);
         }
@@ -43,11 +43,7 @@ contract CollateralManager is IEvents {
     /// @param member The member to check
     /// @param amount The required amount
     /// @return bool True if member has sufficient collateral
-    function isCollateralSufficient(address member, uint256 amount)
-        external
-        view
-        returns (bool)
-    {
+    function isCollateralSufficient(address member, uint256 amount) external view returns (bool) {
         return collateralBalance[member] >= amount;
     }
 

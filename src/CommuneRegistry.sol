@@ -51,11 +51,7 @@ contract CommuneRegistry is IEvents {
     /// @param nonce The nonce for this invite
     /// @param signature The signature from the creator
     /// @return bool True if valid
-    function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature)
-        external
-        view
-        returns (bool)
-    {
+    function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature) external view returns (bool) {
         require(communeId < communeCount, "CommuneRegistry: invalid communeId");
         require(!usedNonces[communeId][nonce], "CommuneRegistry: nonce already used");
 
@@ -105,20 +101,12 @@ contract CommuneRegistry is IEvents {
         return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
     }
 
-    function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature)
-        internal
-        pure
-        returns (address)
-    {
+    function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         return ecrecover(ethSignedMessageHash, v, r, s);
     }
 
-    function splitSignature(bytes memory sig)
-        internal
-        pure
-        returns (bytes32 r, bytes32 s, uint8 v)
-    {
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
         require(sig.length == 65, "CommuneRegistry: invalid signature length");
 
         assembly {

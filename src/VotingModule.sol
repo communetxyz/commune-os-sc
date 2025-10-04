@@ -22,10 +22,7 @@ contract VotingModule is IEvents {
     /// @param expenseId The expense being disputed
     /// @param proposedNewAssignee The proposed new assignee
     /// @return disputeId The ID of the created dispute
-    function createDispute(uint256 expenseId, address proposedNewAssignee)
-        external
-        returns (uint256 disputeId)
-    {
+    function createDispute(uint256 expenseId, address proposedNewAssignee) external returns (uint256 disputeId) {
         require(proposedNewAssignee != address(0), "VotingModule: invalid assignee");
 
         disputeId = disputeCount++;
@@ -69,10 +66,7 @@ contract VotingModule is IEvents {
     /// @param disputeId The dispute ID
     /// @param totalMembers Total number of commune members
     /// @return upheld True if dispute was upheld
-    function resolveDispute(uint256 disputeId, uint256 totalMembers)
-        external
-        returns (bool upheld)
-    {
+    function resolveDispute(uint256 disputeId, uint256 totalMembers) external returns (bool upheld) {
         require(disputeId < disputeCount, "VotingModule: invalid disputeId");
         require(!disputes[disputeId].resolved, "VotingModule: already resolved");
 
@@ -111,11 +105,7 @@ contract VotingModule is IEvents {
     /// @param disputeId The dispute ID
     /// @return votesFor Number of votes in favor
     /// @return votesAgainst Number of votes against
-    function tallyVotes(uint256 disputeId)
-        external
-        view
-        returns (uint256 votesFor, uint256 votesAgainst)
-    {
+    function tallyVotes(uint256 disputeId) external view returns (uint256 votesFor, uint256 votesAgainst) {
         require(disputeId < disputeCount, "VotingModule: invalid disputeId");
         Dispute memory dispute = disputes[disputeId];
         return (dispute.votesFor, dispute.votesAgainst);

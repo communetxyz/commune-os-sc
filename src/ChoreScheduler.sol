@@ -70,11 +70,7 @@ contract ChoreScheduler is IEvents {
     /// @param choreId The chore ID
     /// @param period The period number
     /// @return bool True if completed
-    function isChoreComplete(uint256 communeId, uint256 choreId, uint256 period)
-        external
-        view
-        returns (bool)
-    {
+    function isChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external view returns (bool) {
         return completions[communeId][choreId][period];
     }
 
@@ -93,11 +89,7 @@ contract ChoreScheduler is IEvents {
     function getCurrentChores(uint256 communeId)
         external
         view
-        returns (
-            ChoreSchedule[] memory schedules,
-            uint256[] memory periods,
-            bool[] memory completed
-        )
+        returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed)
     {
         schedules = choreSchedules[communeId];
         uint256 count = schedules.length;

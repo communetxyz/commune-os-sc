@@ -33,25 +33,11 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](2);
-        schedules[0] = ChoreSchedule({
-            id: 0,
-            title: "Kitchen Cleaning",
-            frequency: 1 days,
-            startTime: block.timestamp
-        });
-        schedules[1] = ChoreSchedule({
-            id: 1,
-            title: "Bathroom Cleaning",
-            frequency: 1 weeks,
-            startTime: block.timestamp
-        });
+        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        schedules[1] =
+            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp});
 
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            true,
-            COLLATERAL_AMOUNT,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         assertEq(communeId, 0);
 
@@ -73,19 +59,12 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            true,
-            COLLATERAL_AMOUNT,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         // Generate invite signature
         uint256 nonce = 1;
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
@@ -110,19 +89,9 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({
-            id: 0,
-            title: "Kitchen Cleaning",
-            frequency: 1 days,
-            startTime: block.timestamp
-        });
+        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
 
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            false,
-            0,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
         // Mark chore complete
         communeOS.markChoreComplete(communeId, 0);
@@ -142,19 +111,12 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            false,
-            0,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
         // Generate invite and add member1
         uint256 nonce = 1;
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -167,13 +129,8 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         // Create expense assigned to member1
-        uint256 expenseId = communeOS.createExpense(
-            communeId,
-            100 ether,
-            "Groceries",
-            block.timestamp + 7 days,
-            member1
-        );
+        uint256 expenseId =
+            communeOS.createExpense(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
 
         assertEq(expenseId, 0);
 
@@ -190,19 +147,12 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            false,
-            0,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
         // Generate invite and add member1
         uint256 nonce = 1;
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -214,13 +164,8 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(creator);
 
-        uint256 expenseId = communeOS.createExpense(
-            communeId,
-            100 ether,
-            "Groceries",
-            block.timestamp + 7 days,
-            member1
-        );
+        uint256 expenseId =
+            communeOS.createExpense(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
 
         vm.stopPrank();
 
@@ -238,12 +183,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            true,
-            COLLATERAL_AMOUNT,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         vm.stopPrank();
 
@@ -254,13 +194,8 @@ contract CommuneOSTest is Test {
 
         // Create expense assigned to member1
         vm.startPrank(creator);
-        uint256 expenseId = communeOS.createExpense(
-            communeId,
-            0.5 ether,
-            "Utilities",
-            block.timestamp + 7 days,
-            member1
-        );
+        uint256 expenseId =
+            communeOS.createExpense(communeId, 0.5 ether, "Utilities", block.timestamp + 7 days, member1);
         vm.stopPrank();
 
         // Member2 disputes the expense, proposing member3 as new assignee
@@ -302,36 +237,26 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({
-            id: 0,
-            title: "Daily Chore",
-            frequency: 1 days,
-            startTime: block.timestamp
-        });
+        schedules[0] = ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp});
 
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            false,
-            0,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
         // Check period 0
-        (,uint256[] memory periods0,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods0,) = communeOS.getCurrentChores(communeId);
         assertEq(periods0[0], 0);
 
         // Advance time by 1 day
         vm.warp(block.timestamp + 1 days);
 
         // Check period 1
-        (,uint256[] memory periods1,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods1,) = communeOS.getCurrentChores(communeId);
         assertEq(periods1[0], 1);
 
         // Advance time by 5 more days
         vm.warp(block.timestamp + 5 days);
 
         // Check period 6
-        (,uint256[] memory periods6,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods6,) = communeOS.getCurrentChores(communeId);
         assertEq(periods6[0], 6);
 
         vm.stopPrank();
@@ -341,18 +266,11 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune(
-            "Test Commune",
-            true,
-            COLLATERAL_AMOUNT,
-            schedules
-        );
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         uint256 nonce = 1;
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
@@ -371,9 +289,7 @@ contract CommuneOSTest is Test {
     // Helper function to add members with collateral
     function _addMemberWithCollateral(address _creator, uint256 communeId, address member, uint256 nonce) internal {
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 

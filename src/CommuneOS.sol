@@ -62,10 +62,7 @@ contract CommuneOS is IEvents {
     /// @param signature The creator's signature
     function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
         // Validate the invite
-        require(
-            communeRegistry.validateInvite(communeId, nonce, signature),
-            "CommuneOS: invalid invite"
-        );
+        require(communeRegistry.validateInvite(communeId, nonce, signature), "CommuneOS: invalid invite");
 
         // Get commune details
         Commune memory commune = communeRegistry.getCommune(communeId);
@@ -183,11 +180,8 @@ contract CommuneOS is IEvents {
             Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
 
             // Slash collateral from old assignee
-            uint256 slashed = collateralManager.slashCollateral(
-                expense.assignedTo,
-                expense.amount,
-                dispute.proposedNewAssignee
-            );
+            uint256 slashed =
+                collateralManager.slashCollateral(expense.assignedTo, expense.amount, dispute.proposedNewAssignee);
 
             // Reassign expense to new assignee
             expenseManager.reassignExpense(dispute.expenseId, dispute.proposedNewAssignee);
@@ -205,12 +199,7 @@ contract CommuneOS is IEvents {
     function getCommuneStatistics(uint256 communeId)
         external
         view
-        returns (
-            Commune memory commune,
-            uint256 memberCount,
-            uint256 choreCount,
-            uint256 expenseCount
-        )
+        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount)
     {
         commune = communeRegistry.getCommune(communeId);
         memberCount = memberRegistry.getMemberCount(communeId);
@@ -228,11 +217,7 @@ contract CommuneOS is IEvents {
     function getCurrentChores(uint256 communeId)
         external
         view
-        returns (
-            ChoreSchedule[] memory schedules,
-            uint256[] memory periods,
-            bool[] memory completed
-        )
+        returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed)
     {
         return choreScheduler.getCurrentChores(communeId);
     }

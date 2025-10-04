@@ -17,9 +17,7 @@ contract MemberRegistry is IEvents {
     /// @param communeId The commune ID
     /// @param memberAddress The member's address
     /// @param collateralAmount The collateral deposited
-    function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount)
-        external
-    {
+    function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) external {
         require(memberAddress != address(0), "MemberRegistry: invalid address");
         require(!members[memberAddress].active, "MemberRegistry: already registered");
 
