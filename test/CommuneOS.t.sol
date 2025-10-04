@@ -1,0 +1,385 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.19;
+
+import "forge-std/Test.sol";
+import "../src/CommuneOS.sol";
+import "../src/Types.sol";
+
+contract CommuneOSTest is Test {
+    CommuneOS public communeOS;
+
+    uint256 public creatorPrivateKey = 0x1;
+    uint256 public member1PrivateKey = 0x2;
+    uint256 public member2PrivateKey = 0x3;
+    uint256 public member3PrivateKey = 0x4;
+
+    address public creator;
+    address public member1;
+    address public member2;
+    address public member3;
+
+    uint256 public constant COLLATERAL_AMOUNT = 1 ether;
+
+    function setUp() public {
+        communeOS = new CommuneOS();
+
+        creator = vm.addr(creatorPrivateKey);
+        member1 = vm.addr(member1PrivateKey);
+        member2 = vm.addr(member2PrivateKey);
+        member3 = vm.addr(member3PrivateKey);
+    }
+
+    function testCreateCommune() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](2);
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp
+        });
+        schedules[1] = ChoreSchedule({
+            id: 1,
+            title: "Bathroom Cleaning",
+            frequency: 1 weeks,
+            startTime: block.timestamp
+        });
+
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            true,
+            COLLATERAL_AMOUNT,
+            schedules
+        );
+
+        assertEq(communeId, 0);
+
+        (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount) =
+            communeOS.getCommuneStatistics(communeId);
+
+        assertEq(commune.name, "Test Commune");
+        assertEq(commune.creator, creator);
+        assertTrue(commune.collateralRequired);
+        assertEq(commune.collateralAmount, COLLATERAL_AMOUNT);
+        assertEq(memberCount, 1); // Creator is first member
+        assertEq(choreCount, 2);
+        assertEq(expenseCount, 0);
+
+        vm.stopPrank();
+    }
+
+    function testJoinCommuneWithCollateral() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            true,
+            COLLATERAL_AMOUNT,
+            schedules
+        );
+
+        // Generate invite signature
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.stopPrank();
+
+        // Member joins with collateral
+        vm.deal(member1, 10 ether);
+        vm.startPrank(member1);
+
+        communeOS.joinCommune{value: COLLATERAL_AMOUNT}(communeId, nonce, signature);
+
+        assertEq(communeOS.getCollateralBalance(member1), COLLATERAL_AMOUNT);
+
+        (, uint256 memberCount,,) = communeOS.getCommuneStatistics(communeId);
+        assertEq(memberCount, 2);
+
+        vm.stopPrank();
+    }
+
+    function testMarkChoreComplete() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp
+        });
+
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            false,
+            0,
+            schedules
+        );
+
+        // Mark chore complete
+        communeOS.markChoreComplete(communeId, 0);
+
+        // Check completion
+        (ChoreSchedule[] memory returnedSchedules, uint256[] memory periods, bool[] memory completed) =
+            communeOS.getCurrentChores(communeId);
+
+        assertEq(returnedSchedules.length, 1);
+        assertEq(periods[0], 0); // Current period
+        assertTrue(completed[0]); // Should be marked complete
+
+        vm.stopPrank();
+    }
+
+    function testCreateExpense() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            false,
+            0,
+            schedules
+        );
+
+        // Generate invite and add member1
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.stopPrank();
+
+        vm.startPrank(member1);
+        communeOS.joinCommune(communeId, nonce, signature);
+        vm.stopPrank();
+
+        vm.startPrank(creator);
+
+        // Create expense assigned to member1
+        uint256 expenseId = communeOS.createExpense(
+            communeId,
+            100 ether,
+            "Groceries",
+            block.timestamp + 7 days,
+            member1
+        );
+
+        assertEq(expenseId, 0);
+
+        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        assertEq(expenses.length, 1);
+        assertEq(expenses[0].amount, 100 ether);
+        assertEq(expenses[0].assignedTo, member1);
+        assertFalse(expenses[0].paid);
+
+        vm.stopPrank();
+    }
+
+    function testMarkExpensePaid() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            false,
+            0,
+            schedules
+        );
+
+        // Generate invite and add member1
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.stopPrank();
+
+        vm.startPrank(member1);
+        communeOS.joinCommune(communeId, nonce, signature);
+        vm.stopPrank();
+
+        vm.startPrank(creator);
+
+        uint256 expenseId = communeOS.createExpense(
+            communeId,
+            100 ether,
+            "Groceries",
+            block.timestamp + 7 days,
+            member1
+        );
+
+        vm.stopPrank();
+
+        // Member1 marks expense as paid
+        vm.startPrank(member1);
+        communeOS.markExpensePaid(communeId, expenseId);
+
+        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        assertTrue(expenses[0].paid);
+
+        vm.stopPrank();
+    }
+
+    function testDisputeExpenseFlow() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            true,
+            COLLATERAL_AMOUNT,
+            schedules
+        );
+
+        vm.stopPrank();
+
+        // Add members with collateral
+        _addMemberWithCollateral(creator, communeId, member1, 1);
+        _addMemberWithCollateral(creator, communeId, member2, 2);
+        _addMemberWithCollateral(creator, communeId, member3, 3);
+
+        // Create expense assigned to member1
+        vm.startPrank(creator);
+        uint256 expenseId = communeOS.createExpense(
+            communeId,
+            0.5 ether,
+            "Utilities",
+            block.timestamp + 7 days,
+            member1
+        );
+        vm.stopPrank();
+
+        // Member2 disputes the expense, proposing member3 as new assignee
+        vm.startPrank(member2);
+        uint256 disputeId = communeOS.disputeExpense(communeId, expenseId, member3);
+        vm.stopPrank();
+
+        // Members vote on dispute
+        vm.prank(creator);
+        communeOS.voteOnDispute(communeId, disputeId, true);
+
+        vm.prank(member2);
+        communeOS.voteOnDispute(communeId, disputeId, true);
+
+        vm.prank(member3);
+        communeOS.voteOnDispute(communeId, disputeId, true);
+
+        // Check collateral before resolution
+        uint256 member1BalanceBefore = communeOS.getCollateralBalance(member1);
+        assertEq(member1BalanceBefore, COLLATERAL_AMOUNT);
+
+        // Resolve dispute (should uphold and slash)
+        vm.prank(creator);
+        communeOS.resolveDispute(communeId, disputeId);
+
+        // Check that collateral was slashed
+        uint256 member1BalanceAfter = communeOS.getCollateralBalance(member1);
+        assertEq(member1BalanceAfter, COLLATERAL_AMOUNT - 0.5 ether);
+
+        // Check that member3 received the slashed amount (had 9 ether after depositing collateral, now has 9.5)
+        assertEq(member3.balance, 9 ether + 0.5 ether);
+
+        // Check that expense was reassigned
+        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        assertEq(expenses[0].assignedTo, member3);
+    }
+
+    function testChoreSchedulePeriodCalculation() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Daily Chore",
+            frequency: 1 days,
+            startTime: block.timestamp
+        });
+
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            false,
+            0,
+            schedules
+        );
+
+        // Check period 0
+        (,uint256[] memory periods0,) = communeOS.getCurrentChores(communeId);
+        assertEq(periods0[0], 0);
+
+        // Advance time by 1 day
+        vm.warp(block.timestamp + 1 days);
+
+        // Check period 1
+        (,uint256[] memory periods1,) = communeOS.getCurrentChores(communeId);
+        assertEq(periods1[0], 1);
+
+        // Advance time by 5 more days
+        vm.warp(block.timestamp + 5 days);
+
+        // Check period 6
+        (,uint256[] memory periods6,) = communeOS.getCurrentChores(communeId);
+        assertEq(periods6[0], 6);
+
+        vm.stopPrank();
+    }
+
+    function testCannotJoinWithInsufficientCollateral() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune(
+            "Test Commune",
+            true,
+            COLLATERAL_AMOUNT,
+            schedules
+        );
+
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.stopPrank();
+
+        vm.deal(member1, 10 ether);
+        vm.startPrank(member1);
+
+        // Try to join with insufficient collateral
+        vm.expectRevert("CommuneOS: insufficient collateral");
+        communeOS.joinCommune{value: 0.5 ether}(communeId, nonce, signature);
+
+        vm.stopPrank();
+    }
+
+    // Helper function to add members with collateral
+    function _addMemberWithCollateral(address _creator, uint256 communeId, address member, uint256 nonce) internal {
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(
+            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
+        );
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.deal(member, 10 ether);
+        vm.startPrank(member);
+        communeOS.joinCommune{value: COLLATERAL_AMOUNT}(communeId, nonce, signature);
+        vm.stopPrank();
+    }
+}
