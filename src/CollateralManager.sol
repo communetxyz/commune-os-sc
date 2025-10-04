@@ -1,14 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import "./IEvents.sol";
+
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
-contract CollateralManager {
+contract CollateralManager is IEvents {
     // Member address => collateral balance
     mapping(address => uint256) public collateralBalance;
-
-    event CollateralDeposited(address indexed member, uint256 amount);
-    event CollateralSlashed(address indexed member, uint256 amount, address indexed recipient);
 
     /// @notice Deposit collateral for a member
     /// @param member The member address

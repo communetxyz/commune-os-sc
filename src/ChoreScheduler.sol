@@ -2,19 +2,17 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
+import "./IEvents.sol";
 
 /// @title ChoreScheduler
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage
-contract ChoreScheduler {
+contract ChoreScheduler is IEvents {
     // CommuneId => array of ChoreSchedules
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
 
     // CommuneId => ChoreId => Period => completion status
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
-
-    event ChoreScheduleInitialized(uint256 indexed communeId, uint256 indexed choreId, string title);
-    event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
 
     /// @notice Initialize chore schedules for a commune
     /// @param communeId The commune ID

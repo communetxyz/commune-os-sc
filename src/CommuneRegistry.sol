@@ -2,10 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
+import "./IEvents.sol";
 
 /// @title CommuneRegistry
 /// @notice Creates and manages communes with invite-based access
-contract CommuneRegistry {
+contract CommuneRegistry is IEvents {
     // CommuneId => Commune data
     mapping(uint256 => Commune) public communes;
 
@@ -13,14 +14,6 @@ contract CommuneRegistry {
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
 
     uint256 public communeCount;
-
-    event CommuneCreated(
-        uint256 indexed communeId,
-        string name,
-        address indexed creator,
-        bool collateralRequired,
-        uint256 collateralAmount
-    );
 
     /// @notice Create a new commune
     /// @param name The commune name

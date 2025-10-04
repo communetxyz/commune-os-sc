@@ -2,10 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
+import "./IEvents.sol";
 
 /// @title VotingModule
 /// @notice Manages voting on expense disputes
-contract VotingModule {
+contract VotingModule is IEvents {
     // DisputeId => Dispute data
     mapping(uint256 => Dispute) public disputes;
 
@@ -16,10 +17,6 @@ contract VotingModule {
     mapping(uint256 => mapping(address => bool)) public votes;
 
     uint256 public disputeCount;
-
-    event DisputeCreated(uint256 indexed disputeId, uint256 indexed expenseId, address proposedNewAssignee);
-    event VoteCast(uint256 indexed disputeId, address indexed voter, bool support);
-    event DisputeResolved(uint256 indexed disputeId, bool upheld);
 
     /// @notice Create a new dispute for an expense
     /// @param expenseId The expense being disputed

@@ -2,17 +2,16 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
+import "./IEvents.sol";
 
 /// @title MemberRegistry
 /// @notice Manages commune members and their status
-contract MemberRegistry {
+contract MemberRegistry is IEvents {
     // CommuneId => array of member addresses
     mapping(uint256 => address[]) public communeMembers;
 
     // Member address => Member data
     mapping(address => Member) public members;
-
-    event MemberRegistered(address indexed member, uint256 indexed communeId, uint256 collateral, uint256 timestamp);
 
     /// @notice Register a new member to a commune
     /// @param communeId The commune ID

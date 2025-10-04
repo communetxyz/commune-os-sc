@@ -2,10 +2,11 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
+import "./IEvents.sol";
 
 /// @title ExpenseManager
 /// @notice Manages expense lifecycle including creation, assignment, payments, and disputes
-contract ExpenseManager {
+contract ExpenseManager is IEvents {
     // ExpenseId (global) => Expense
     mapping(uint256 => Expense) public expenses;
 
@@ -25,18 +26,6 @@ contract ExpenseManager {
     mapping(uint256 => uint256) public expenseDisputes;
 
     uint256 public expenseCount;
-
-    event ExpenseCreated(
-        uint256 indexed expenseId,
-        uint256 indexed communeId,
-        address indexed assignedTo,
-        uint256 amount,
-        string description,
-        uint256 dueDate
-    );
-    event ExpensePaid(uint256 indexed expenseId, address indexed paidBy);
-    event ExpenseDisputed(uint256 indexed expenseId, uint256 indexed disputeId);
-    event ExpenseReassigned(uint256 indexed expenseId, address indexed oldAssignee, address indexed newAssignee);
 
     /// @notice Create a new expense with direct assignment
     /// @param communeId The commune ID

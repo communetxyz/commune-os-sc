@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./Types.sol";
+import "./IEvents.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
@@ -12,15 +13,13 @@ import "./CollateralManager.sol";
 /// @title CommuneOS
 /// @notice Main contract integrating all commune management modules
 /// @dev Deployed on Gnosis Chain for low gas fees
-contract CommuneOS {
+contract CommuneOS is IEvents {
     CommuneRegistry public communeRegistry;
     MemberRegistry public memberRegistry;
     ChoreScheduler public choreScheduler;
     ExpenseManager public expenseManager;
     VotingModule public votingModule;
     CollateralManager public collateralManager;
-
-    event MemberJoined(address indexed member, uint256 indexed communeId, uint256 collateral, uint256 timestamp);
 
     constructor() {
         communeRegistry = new CommuneRegistry();
