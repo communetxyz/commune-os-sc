@@ -8,7 +8,6 @@ import "./CommuneOSModule.sol";
 /// @title MemberRegistry
 /// @notice Manages commune members and their status
 contract MemberRegistry is CommuneOSModule, IMemberRegistry {
-
     // CommuneId => array of Members
     mapping(uint256 => Member[]) public communeMembers;
 
@@ -21,19 +20,12 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @notice Register a new member to a commune
     /// @param communeId The commune ID
     /// @param memberAddress The member's address
-    function registerMember(uint256 communeId, address memberAddress, uint256)
-        external
-        onlyCommuneOS
-    {
+    function registerMember(uint256 communeId, address memberAddress, uint256) external onlyCommuneOS {
         if (memberAddress == address(0)) revert InvalidAddress();
         if (isRegistered[memberAddress]) revert AlreadyRegistered();
 
-        Member memory newMember = Member({
-            walletAddress: memberAddress,
-            joinDate: block.timestamp,
-            communeId: communeId,
-            active: true
-        });
+        Member memory newMember =
+            Member({walletAddress: memberAddress, joinDate: block.timestamp, communeId: communeId, active: true});
 
         communeMembers[communeId].push(newMember);
         isRegistered[memberAddress] = true;

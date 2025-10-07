@@ -8,7 +8,6 @@ import "./CommuneOSModule.sol";
 /// @title ExpenseManager
 /// @notice Manages expense lifecycle including creation, assignment, payments, and disputes
 contract ExpenseManager is CommuneOSModule, IExpenseManager {
-
     // ExpenseId (global) => Expense
     mapping(uint256 => Expense) public expenses;
 

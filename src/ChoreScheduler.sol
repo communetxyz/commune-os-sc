@@ -9,7 +9,6 @@ import "./CommuneOSModule.sol";
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage
 contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
-
     // CommuneId => array of ChoreSchedules
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
 

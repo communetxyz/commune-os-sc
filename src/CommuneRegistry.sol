@@ -8,7 +8,6 @@ import "./CommuneOSModule.sol";
 /// @title CommuneRegistry
 /// @notice Creates and manages communes with invite-based access
 contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
-
     // CommuneId => Commune data
     mapping(uint256 => Commune) public communes;
 

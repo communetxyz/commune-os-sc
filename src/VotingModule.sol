@@ -8,7 +8,6 @@ import "./CommuneOSModule.sol";
 /// @title VotingModule
 /// @notice Manages voting on expense disputes
 contract VotingModule is CommuneOSModule, IVotingModule {
-
     // DisputeId => Dispute data
     mapping(uint256 => Dispute) public disputes;
 
