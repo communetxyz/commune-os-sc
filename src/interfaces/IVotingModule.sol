@@ -12,7 +12,6 @@ interface IVotingModule {
     event DisputeResolved(uint256 indexed disputeId, bool upheld);
 
     // Errors
-    error Unauthorized();
     error InvalidAssignee();
     error InvalidDisputeId();
     error AlreadyResolved();

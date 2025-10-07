@@ -16,7 +16,6 @@ struct Member {
     address walletAddress;
     uint256 joinDate;
     uint256 communeId;
-    uint256 collateralDeposited;
     bool active;
 }
 
@@ -29,13 +28,13 @@ struct ChoreSchedule {
 
 struct Expense {
     uint256 id;
+    uint256 communeId;
     uint256 amount;
     string description;
     address assignedTo;
     uint256 dueDate;
     bool paid;
     bool disputed;
-    uint256 createdAt;
 }
 
 struct Dispute {

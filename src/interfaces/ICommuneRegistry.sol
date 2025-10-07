@@ -16,7 +16,6 @@ interface ICommuneRegistry {
     );
 
     // Errors
-    error Unauthorized();
     error EmptyName();
     error InvalidCreator();
     error InvalidCollateralAmount();

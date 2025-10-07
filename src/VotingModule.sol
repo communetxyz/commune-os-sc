@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import {Dispute} from "./Types.sol";
 import "./interfaces/IVotingModule.sol";
+import "./CommuneOSModule.sol";
 
 /// @title VotingModule
 /// @notice Manages voting on expense disputes
-contract VotingModule is IVotingModule {
-    address public immutable communeOS;
+contract VotingModule is CommuneOSModule, IVotingModule {
 
     // DisputeId => Dispute data
     mapping(uint256 => Dispute) public disputes;
@@ -19,15 +19,6 @@ contract VotingModule is IVotingModule {
     mapping(uint256 => mapping(address => bool)) public votes;
 
     uint256 public disputeCount;
-
-    constructor() {
-        communeOS = msg.sender;
-    }
-
-    modifier onlyCommuneOS() {
-        if (msg.sender != communeOS) revert Unauthorized();
-        _;
-    }
 
     /// @notice Create a new dispute for an expense
     /// @param expenseId The expense being disputed

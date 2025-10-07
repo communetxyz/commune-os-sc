@@ -3,12 +3,12 @@ pragma solidity ^0.8.19;
 
 import {ChoreSchedule} from "./Types.sol";
 import "./interfaces/IChoreScheduler.sol";
+import "./CommuneOSModule.sol";
 
 /// @title ChoreScheduler
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage
-contract ChoreScheduler is IChoreScheduler {
-    address public immutable communeOS;
+contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
 
     // CommuneId => array of ChoreSchedules
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
@@ -18,15 +18,6 @@ contract ChoreScheduler is IChoreScheduler {
 
     // CommuneId => ChoreId => override assignee (address(0) means use rotation)
     mapping(uint256 => mapping(uint256 => address)) public choreAssigneeOverrides;
-
-    constructor() {
-        communeOS = msg.sender;
-    }
-
-    modifier onlyCommuneOS() {
-        if (msg.sender != communeOS) revert Unauthorized();
-        _;
-    }
 
     /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID

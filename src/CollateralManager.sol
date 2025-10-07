@@ -2,6 +2,7 @@
 pragma solidity ^0.8.19;
 
 import "./interfaces/ICollateralManager.sol";
+import "./CommuneOSModule.sol";
 
 interface IERC20 {
     function transferFrom(address from, address to, uint256 amount) external returns (bool);
@@ -11,8 +12,7 @@ interface IERC20 {
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
 /// @dev Supports both native ETH and ERC20 tokens for collateral
-contract CollateralManager is ICollateralManager {
-    address public immutable communeOS;
+contract CollateralManager is CommuneOSModule, ICollateralManager {
     IERC20 public immutable collateralToken;
     bool public immutable useERC20;
 
@@ -21,14 +21,8 @@ contract CollateralManager is ICollateralManager {
 
     /// @param _collateralToken Address of ERC20 token (address(0) for native ETH)
     constructor(address _collateralToken) {
-        communeOS = msg.sender;
         useERC20 = _collateralToken != address(0);
         collateralToken = IERC20(_collateralToken); // Safe to set even if address(0)
-    }
-
-    modifier onlyCommuneOS() {
-        if (msg.sender != communeOS) revert Unauthorized();
-        _;
     }
 
     /// @notice Deposit collateral for a member

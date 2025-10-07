@@ -20,7 +20,6 @@ interface IExpenseManager {
     event ExpenseReassigned(uint256 indexed expenseId, address indexed oldAssignee, address indexed newAssignee);
 
     // Errors
-    error Unauthorized();
     error InvalidAssignee();
     error InvalidAmount();
     error EmptyDescription();

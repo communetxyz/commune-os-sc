@@ -3,40 +3,19 @@ pragma solidity ^0.8.19;
 
 import {Expense} from "./Types.sol";
 import "./interfaces/IExpenseManager.sol";
+import "./CommuneOSModule.sol";
 
 /// @title ExpenseManager
 /// @notice Manages expense lifecycle including creation, assignment, payments, and disputes
-contract ExpenseManager is IExpenseManager {
-    address public immutable communeOS;
+contract ExpenseManager is CommuneOSModule, IExpenseManager {
 
     // ExpenseId (global) => Expense
     mapping(uint256 => Expense) public expenses;
-
-    // ExpenseId => communeId (to track which commune an expense belongs to)
-    mapping(uint256 => uint256) public expenseToCommuneId;
-
-    // CommuneId => array of expense IDs
-    mapping(uint256 => uint256[]) public communeExpenseIds;
-
-    // ExpenseId => current assigned member
-    mapping(uint256 => address) public expenseAssignments;
-
-    // ExpenseId => member => payment status
-    mapping(uint256 => mapping(address => bool)) public expensePayments;
 
     // ExpenseId => disputeId
     mapping(uint256 => uint256) public expenseDisputes;
 
     uint256 public expenseCount;
-
-    constructor() {
-        communeOS = msg.sender;
-    }
-
-    modifier onlyCommuneOS() {
-        if (msg.sender != communeOS) revert Unauthorized();
-        _;
-    }
 
     /// @notice Create a new expense with direct assignment
     /// @param communeId The commune ID
@@ -58,21 +37,16 @@ contract ExpenseManager is IExpenseManager {
 
         expenseId = expenseCount++;
 
-        Expense memory expense = Expense({
+        expenses[expenseId] = Expense({
             id: expenseId,
+            communeId: communeId,
             amount: amount,
             description: description,
             assignedTo: assignedTo,
             dueDate: dueDate,
             paid: false,
-            disputed: false,
-            createdAt: block.timestamp
+            disputed: false
         });
-
-        expenses[expenseId] = expense;
-        expenseToCommuneId[expenseId] = communeId;
-        communeExpenseIds[communeId].push(expenseId);
-        expenseAssignments[expenseId] = assignedTo;
 
         emit ExpenseCreated(expenseId, communeId, assignedTo, amount, description, dueDate);
         return expenseId;
@@ -85,7 +59,6 @@ contract ExpenseManager is IExpenseManager {
         if (expenses[expenseId].paid) revert AlreadyPaid();
 
         expenses[expenseId].paid = true;
-        expensePayments[expenseId][msg.sender] = true;
 
         emit ExpensePaid(expenseId, msg.sender);
     }
@@ -113,7 +86,6 @@ contract ExpenseManager is IExpenseManager {
 
         expenses[expenseId].assignedTo = newAssignee;
         expenses[expenseId].paid = false; // Reset paid status
-        expenseAssignments[expenseId] = newAssignee;
 
         emit ExpenseReassigned(expenseId, oldAssignee, newAssignee);
     }
@@ -138,11 +110,22 @@ contract ExpenseManager is IExpenseManager {
     /// @param communeId The commune ID
     /// @return Expense[] Array of expenses
     function getCommuneExpenses(uint256 communeId) external view returns (Expense[] memory) {
-        uint256[] memory expenseIds = communeExpenseIds[communeId];
-        Expense[] memory result = new Expense[](expenseIds.length);
+        // First, count how many expenses belong to this commune
+        uint256 count = 0;
+        for (uint256 i = 0; i < expenseCount; i++) {
+            if (expenses[i].communeId == communeId) {
+                count++;
+            }
+        }
 
-        for (uint256 i = 0; i < expenseIds.length; i++) {
-            result[i] = expenses[expenseIds[i]];
+        // Create result array and populate it
+        Expense[] memory result = new Expense[](count);
+        uint256 resultIndex = 0;
+        for (uint256 i = 0; i < expenseCount; i++) {
+            if (expenses[i].communeId == communeId) {
+                result[resultIndex] = expenses[i];
+                resultIndex++;
+            }
         }
 
         return result;
@@ -153,6 +136,6 @@ contract ExpenseManager is IExpenseManager {
     /// @return address The assigned member
     function getExpenseAssignee(uint256 expenseId) external view returns (address) {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
-        return expenseAssignments[expenseId];
+        return expenses[expenseId].assignedTo;
     }
 }

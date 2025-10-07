@@ -12,7 +12,6 @@ interface IChoreScheduler {
     event ChoreAssigneeSet(uint256 indexed communeId, uint256 indexed choreId, address indexed assignee);
 
     // Errors
-    error Unauthorized();
     error NoSchedulesProvided();
     error InvalidFrequency();
     error EmptyTitle();

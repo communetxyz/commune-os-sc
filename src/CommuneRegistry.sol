@@ -3,11 +3,11 @@ pragma solidity ^0.8.19;
 
 import {Commune} from "./Types.sol";
 import "./interfaces/ICommuneRegistry.sol";
+import "./CommuneOSModule.sol";
 
 /// @title CommuneRegistry
 /// @notice Creates and manages communes with invite-based access
-contract CommuneRegistry is ICommuneRegistry {
-    address public immutable communeOS;
+contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
 
     // CommuneId => Commune data
     mapping(uint256 => Commune) public communes;
@@ -16,15 +16,6 @@ contract CommuneRegistry is ICommuneRegistry {
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
 
     uint256 public communeCount;
-
-    constructor() {
-        communeOS = msg.sender;
-    }
-
-    modifier onlyCommuneOS() {
-        if (msg.sender != communeOS) revert Unauthorized();
-        _;
-    }
 
     /// @notice Create a new commune
     /// @param name The commune name
