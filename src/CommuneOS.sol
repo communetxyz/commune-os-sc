@@ -21,13 +21,13 @@ contract CommuneOS is ICommuneOS {
     VotingModule public votingModule;
     CollateralManager public collateralManager;
 
-    constructor() {
+    constructor(address collateralToken) {
         communeRegistry = new CommuneRegistry();
         memberRegistry = new MemberRegistry();
         choreScheduler = new ChoreScheduler();
         expenseManager = new ExpenseManager();
         votingModule = new VotingModule();
-        collateralManager = new CollateralManager();
+        collateralManager = new CollateralManager(collateralToken);
     }
 
     /// @notice Create a new commune with initial chore schedules
@@ -60,26 +60,27 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external {
         // Validate the invite
         if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
 
         // Get commune details
         Commune memory commune = communeRegistry.getCommune(communeId);
 
-        // Check collateral requirement
+        // Check collateral requirement and deposit via transferFrom
+        uint256 collateralAmount = 0;
         if (commune.collateralRequired) {
-            if (msg.value < commune.collateralAmount) revert InsufficientCollateral();
-            collateralManager.depositCollateral{value: msg.value}(msg.sender);
+            collateralAmount = commune.collateralAmount;
+            collateralManager.depositCollateral(msg.sender, collateralAmount);
         }
 
         // Mark nonce as used
         communeRegistry.markNonceUsed(communeId, nonce);
 
         // Register the member
-        memberRegistry.registerMember(communeId, msg.sender, msg.value);
+        memberRegistry.registerMember(communeId, msg.sender, collateralAmount);
 
-        emit MemberJoined(msg.sender, communeId, msg.value, block.timestamp);
+        emit MemberJoined(msg.sender, communeId, collateralAmount, block.timestamp);
     }
 
     /// @notice Mark a chore as complete
@@ -180,8 +181,7 @@ contract CommuneOS is ICommuneOS {
             Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
 
             // Slash collateral from old assignee
-            uint256 slashed =
-                collateralManager.slashCollateral(expense.assignedTo, expense.amount, dispute.proposedNewAssignee);
+            collateralManager.slashCollateral(expense.assignedTo, expense.amount, dispute.proposedNewAssignee);
 
             // Reassign expense to new assignee
             expenseManager.reassignExpense(dispute.expenseId, dispute.proposedNewAssignee);

@@ -3,16 +3,23 @@ pragma solidity ^0.8.19;
 
 import "./interfaces/ICollateralManager.sol";
 
+interface IERC20 {
+    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function transfer(address to, uint256 amount) external returns (bool);
+}
+
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
 contract CollateralManager is ICollateralManager {
     address public immutable communeOS;
+    IERC20 public immutable collateralToken;
 
     // Member address => collateral balance
     mapping(address => uint256) public collateralBalance;
 
-    constructor() {
+    constructor(address _collateralToken) {
         communeOS = msg.sender;
+        collateralToken = IERC20(_collateralToken);
     }
 
     modifier onlyCommuneOS() {
@@ -20,35 +27,30 @@ contract CollateralManager is ICollateralManager {
         _;
     }
 
-    /// @notice Deposit collateral for a member
+    /// @notice Deposit collateral for a member using transferFrom pattern
     /// @param member The member address
-    function depositCollateral(address member) external payable onlyCommuneOS {
-        if (msg.value == 0) revert InvalidDepositAmount();
-        collateralBalance[member] += msg.value;
-        emit CollateralDeposited(member, msg.value);
+    /// @param amount The amount to deposit
+    function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
+        if (amount == 0) revert InvalidDepositAmount();
+
+        bool success = collateralToken.transferFrom(member, address(this), amount);
+        if (!success) revert TransferFailed();
+
+        collateralBalance[member] += amount;
+        emit CollateralDeposited(member, amount);
     }
 
     /// @notice Slash collateral from a member and transfer to recipient
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
-    /// @return actualSlashed The actual amount slashed (may be less if insufficient collateral)
-    function slashCollateral(address member, uint256 amount, address recipient)
-        external
-        onlyCommuneOS
-        returns (uint256 actualSlashed)
-    {
-        uint256 available = collateralBalance[member];
-        actualSlashed = amount > available ? available : amount;
+    function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
+        collateralBalance[member] -= amount; // Will revert if insufficient balance
 
-        if (actualSlashed > 0) {
-            collateralBalance[member] -= actualSlashed;
-            (bool success,) = recipient.call{value: actualSlashed}("");
-            if (!success) revert TransferFailed();
-            emit CollateralSlashed(member, actualSlashed, recipient);
-        }
+        bool success = collateralToken.transfer(recipient, amount);
+        if (!success) revert TransferFailed();
 
-        return actualSlashed;
+        emit CollateralSlashed(member, amount, recipient);
     }
 
     /// @notice Check if member has sufficient collateral

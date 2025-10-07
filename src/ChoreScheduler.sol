@@ -16,6 +16,9 @@ contract ChoreScheduler is IChoreScheduler {
     // CommuneId => ChoreId => Period => completion status
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
 
+    // CommuneId => ChoreId => override assignee (address(0) means use rotation)
+    mapping(uint256 => mapping(uint256 => address)) public choreAssigneeOverrides;
+
     constructor() {
         communeOS = msg.sender;
     }
@@ -37,7 +40,6 @@ contract ChoreScheduler is IChoreScheduler {
             if (schedules[i].frequency == 0) revert InvalidFrequency();
             if (bytes(schedules[i].title).length == 0) revert EmptyTitle();
             if (schedules[i].startTime == 0) revert InvalidStartTime();
-            if (schedules[i].assignedTo == address(0)) revert InvalidAssignedMember();
 
             uint256 choreId = currentChoreCount + i;
 
@@ -45,12 +47,11 @@ contract ChoreScheduler is IChoreScheduler {
                 id: choreId,
                 title: schedules[i].title,
                 frequency: schedules[i].frequency,
-                startTime: schedules[i].startTime,
-                assignedTo: schedules[i].assignedTo
+                startTime: schedules[i].startTime
             });
 
             choreSchedules[communeId].push(schedule);
-            emit ChoreCreated(communeId, choreId, schedule.title, schedule.assignedTo);
+            emit ChoreCreated(communeId, choreId, schedule.title);
         }
     }
 
@@ -122,7 +123,42 @@ contract ChoreScheduler is IChoreScheduler {
         return (schedules, periods, completed);
     }
 
-    /// @notice Calculate which member is assigned to a chore in a given period
+    /// @notice Set an override assignee for a specific chore
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID
+    /// @param assignee The member to assign (address(0) to use rotation)
+    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external onlyCommuneOS {
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+        choreAssigneeOverrides[communeId][choreId] = assignee;
+        emit ChoreAssigneeSet(communeId, choreId, assignee);
+    }
+
+    /// @notice Get the assigned member for a chore in the current period
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID
+    /// @param members Array of commune members
+    /// @return address The assigned member
+    function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
+        external
+        view
+        returns (address)
+    {
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+
+        // Check if there's an override
+        address override_ = choreAssigneeOverrides[communeId][choreId];
+        if (override_ != address(0)) {
+            return override_;
+        }
+
+        // Use rotation based on current period
+        if (members.length == 0) revert NoMembers();
+        uint256 period = getCurrentPeriod(communeId, choreId);
+        uint256 memberIndex = (choreId + period) % members.length;
+        return members[memberIndex];
+    }
+
+    /// @notice Calculate which member index is assigned to a chore in a given period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
     /// @param period The period number
@@ -133,7 +169,7 @@ contract ChoreScheduler is IChoreScheduler {
         pure
         returns (uint256)
     {
-        require(memberCount > 0, "ChoreScheduler: no members");
+        if (memberCount == 0) revert NoMembers();
         // Simple rotation: period % memberCount
         return (choreId + period) % memberCount;
     }

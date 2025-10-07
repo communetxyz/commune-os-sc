@@ -7,10 +7,11 @@ import "../src/CommuneOS.sol";
 contract DeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        address collateralToken = vm.envAddress("COLLATERAL_TOKEN");
 
         vm.startBroadcast(deployerPrivateKey);
 
-        CommuneOS communeOS = new CommuneOS();
+        CommuneOS communeOS = new CommuneOS(collateralToken);
 
         console.log("CommuneOS deployed to:", address(communeOS));
         console.log("CommuneRegistry:", address(communeOS.communeRegistry()));

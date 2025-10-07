@@ -5,9 +5,11 @@ import "forge-std/Test.sol";
 import "../src/CommuneOS.sol";
 import "../src/interfaces/ICommuneOS.sol";
 import "../src/Types.sol";
+import "./MockERC20.sol";
 
 contract CommuneOSTest is Test {
     CommuneOS public communeOS;
+    MockERC20 public token;
 
     uint256 public creatorPrivateKey = 0x1;
     uint256 public member1PrivateKey = 0x2;
@@ -22,32 +24,27 @@ contract CommuneOSTest is Test {
     uint256 public constant COLLATERAL_AMOUNT = 1 ether;
 
     function setUp() public {
-        communeOS = new CommuneOS();
+        token = new MockERC20();
+        communeOS = new CommuneOS(address(token));
 
         creator = vm.addr(creatorPrivateKey);
         member1 = vm.addr(member1PrivateKey);
         member2 = vm.addr(member2PrivateKey);
         member3 = vm.addr(member3PrivateKey);
+
+        // Mint tokens for testing
+        token.mint(member1, 100 ether);
+        token.mint(member2, 100 ether);
+        token.mint(member3, 100 ether);
     }
 
     function testCreateCommune() public {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](2);
-        schedules[0] = ChoreSchedule({
-            id: 0,
-            title: "Kitchen Cleaning",
-            frequency: 1 days,
-            startTime: block.timestamp,
-            assignedTo: creator
-        });
-        schedules[1] = ChoreSchedule({
-            id: 1,
-            title: "Bathroom Cleaning",
-            frequency: 1 weeks,
-            startTime: block.timestamp,
-            assignedTo: creator
-        });
+        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        schedules[1] =
+            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp});
 
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
@@ -84,10 +81,9 @@ contract CommuneOSTest is Test {
         vm.stopPrank();
 
         // Member joins with collateral
-        vm.deal(member1, 10 ether);
         vm.startPrank(member1);
-
-        communeOS.joinCommune{value: COLLATERAL_AMOUNT}(communeId, nonce, signature);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        communeOS.joinCommune(communeId, nonce, signature);
 
         assertEq(communeOS.getCollateralBalance(member1), COLLATERAL_AMOUNT);
 
@@ -101,13 +97,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({
-            id: 0,
-            title: "Kitchen Cleaning",
-            frequency: 1 days,
-            startTime: block.timestamp,
-            assignedTo: creator
-        });
+        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
@@ -243,8 +233,8 @@ contract CommuneOSTest is Test {
         uint256 member1BalanceAfter = communeOS.getCollateralBalance(member1);
         assertEq(member1BalanceAfter, COLLATERAL_AMOUNT - 0.5 ether);
 
-        // Check that member3 received the slashed amount (had 9 ether after depositing collateral, now has 9.5)
-        assertEq(member3.balance, 9 ether + 0.5 ether);
+        // Check that member3 received the slashed amount in ERC20 tokens
+        assertEq(token.balanceOf(member3), 100 ether - COLLATERAL_AMOUNT + 0.5 ether);
 
         // Check that expense was reassigned
         Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
@@ -255,13 +245,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({
-            id: 0,
-            title: "Daily Chore",
-            frequency: 1 days,
-            startTime: block.timestamp,
-            assignedTo: creator
-        });
+        schedules[0] = ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp});
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
@@ -300,12 +284,12 @@ contract CommuneOSTest is Test {
 
         vm.stopPrank();
 
-        vm.deal(member1, 10 ether);
         vm.startPrank(member1);
 
-        // Try to join with insufficient collateral
-        vm.expectRevert(ICommuneOS.InsufficientCollateral.selector);
-        communeOS.joinCommune{value: 0.5 ether}(communeId, nonce, signature);
+        // Try to join with insufficient collateral (only approve half)
+        token.approve(address(communeOS.collateralManager()), 0.5 ether);
+        vm.expectRevert(); // Will revert on transferFrom due to insufficient approval
+        communeOS.joinCommune(communeId, nonce, signature);
 
         vm.stopPrank();
     }
@@ -317,9 +301,9 @@ contract CommuneOSTest is Test {
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
         bytes memory signature = abi.encodePacked(r, s, v);
 
-        vm.deal(member, 10 ether);
         vm.startPrank(member);
-        communeOS.joinCommune{value: COLLATERAL_AMOUNT}(communeId, nonce, signature);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        communeOS.joinCommune(communeId, nonce, signature);
         vm.stopPrank();
     }
 }

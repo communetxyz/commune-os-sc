@@ -7,8 +7,9 @@ import "../Types.sol";
 /// @notice Interface for managing chore schedules and completions
 interface IChoreScheduler {
     // Events
-    event ChoreCreated(uint256 indexed communeId, uint256 indexed choreId, string title, address indexed assignedTo);
+    event ChoreCreated(uint256 indexed communeId, uint256 indexed choreId, string title);
     event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
+    event ChoreAssigneeSet(uint256 indexed communeId, uint256 indexed choreId, address indexed assignee);
 
     // Errors
     error Unauthorized();
@@ -18,7 +19,7 @@ interface IChoreScheduler {
     error InvalidChoreId();
     error AlreadyCompleted();
     error InvalidStartTime();
-    error InvalidAssignedMember();
+    error NoMembers();
 
     // Functions
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
@@ -35,6 +36,13 @@ interface IChoreScheduler {
         external
         view
         returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed);
+
+    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external;
+
+    function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
+        external
+        view
+        returns (address);
 
     function getAssignedMemberIndex(uint256 communeId, uint256 choreId, uint256 period, uint256 memberCount)
         external

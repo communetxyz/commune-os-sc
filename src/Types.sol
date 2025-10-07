@@ -26,7 +26,6 @@ struct ChoreSchedule {
     string title;
     uint256 frequency; // in seconds
     uint256 startTime; // Unix timestamp
-    address assignedTo; // Member assigned to this chore
 }
 
 struct Expense {

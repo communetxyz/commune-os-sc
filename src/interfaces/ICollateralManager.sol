@@ -14,11 +14,9 @@ interface ICollateralManager {
     error TransferFailed();
 
     // Functions
-    function depositCollateral(address member) external payable;
+    function depositCollateral(address member, uint256 amount) external;
 
-    function slashCollateral(address member, uint256 amount, address recipient)
-        external
-        returns (uint256 actualSlashed);
+    function slashCollateral(address member, uint256 amount, address recipient) external;
 
     function isCollateralSufficient(address member, uint256 amount) external view returns (bool);
 
