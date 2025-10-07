@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./Types.sol";
+import {Expense} from "./Types.sol";
 import "./interfaces/IExpenseManager.sol";
 
 /// @title ExpenseManager

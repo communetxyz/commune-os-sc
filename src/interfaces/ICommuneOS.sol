@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../Types.sol";
+import {Commune, ChoreSchedule, Expense} from "../Types.sol";
 
 interface ICommuneOS {
     // Events

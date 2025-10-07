@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../Types.sol";
+import {Dispute} from "../Types.sol";
 
 /// @title IVotingModule
 /// @notice Interface for managing voting on expense disputes

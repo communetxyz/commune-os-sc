@@ -10,7 +10,6 @@ struct Commune {
     address creator;
     bool collateralRequired;
     uint256 collateralAmount;
-    uint256 createdAt;
 }
 
 struct Member {

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "./Types.sol";
+import {Commune} from "./Types.sol";
 import "./interfaces/ICommuneRegistry.sol";
 
 /// @title CommuneRegistry
@@ -48,8 +48,7 @@ contract CommuneRegistry is ICommuneRegistry {
             name: name,
             creator: creator,
             collateralRequired: collateralRequired,
-            collateralAmount: collateralAmount,
-            createdAt: block.timestamp
+            collateralAmount: collateralAmount
         });
 
         emit CommuneCreated(communeId, name, creator, collateralRequired, collateralAmount);

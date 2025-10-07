@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../Types.sol";
+import {Member} from "../Types.sol";
 
 /// @title IMemberRegistry
 /// @notice Interface for managing commune members and their status

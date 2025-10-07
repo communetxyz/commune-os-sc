@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../Types.sol";
+import {Commune} from "../Types.sol";
 
 /// @title ICommuneRegistry
 /// @notice Interface for commune creation and invite-based access control

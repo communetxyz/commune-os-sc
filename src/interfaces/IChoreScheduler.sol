@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import "../Types.sol";
+import {ChoreSchedule} from "../Types.sol";
 
 /// @title IChoreScheduler
 /// @notice Interface for managing chore schedules and completions
