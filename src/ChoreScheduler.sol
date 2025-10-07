@@ -39,7 +39,7 @@ contract ChoreScheduler is IChoreScheduler {
             });
 
             choreSchedules[communeId].push(schedule);
-            emit ChoreAdded(communeId, choreId, schedule.title, schedule.assignedTo);
+            emit ChoreCreated(communeId, choreId, schedule.title, schedule.assignedTo);
         }
     }
 

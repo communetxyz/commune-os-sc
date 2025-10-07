@@ -7,7 +7,7 @@ import "../Types.sol";
 /// @notice Interface for managing chore schedules and completions
 interface IChoreScheduler {
     // Events
-    event ChoreAdded(uint256 indexed communeId, uint256 indexed choreId, string title, address indexed assignedTo);
+    event ChoreCreated(uint256 indexed communeId, uint256 indexed choreId, string title, address indexed assignedTo);
     event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
 
     // Errors
