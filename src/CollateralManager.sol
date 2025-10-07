@@ -10,16 +10,20 @@ interface IERC20 {
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
+/// @dev Supports both native ETH and ERC20 tokens for collateral
 contract CollateralManager is ICollateralManager {
     address public immutable communeOS;
     IERC20 public immutable collateralToken;
+    bool public immutable useERC20;
 
     // Member address => collateral balance
     mapping(address => uint256) public collateralBalance;
 
+    /// @param _collateralToken Address of ERC20 token (address(0) for native ETH)
     constructor(address _collateralToken) {
         communeOS = msg.sender;
-        collateralToken = IERC20(_collateralToken);
+        useERC20 = _collateralToken != address(0);
+        collateralToken = IERC20(_collateralToken); // Safe to set even if address(0)
     }
 
     modifier onlyCommuneOS() {
@@ -27,14 +31,21 @@ contract CollateralManager is ICollateralManager {
         _;
     }
 
-    /// @notice Deposit collateral for a member using transferFrom pattern
+    /// @notice Deposit collateral for a member
     /// @param member The member address
     /// @param amount The amount to deposit
-    function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
+    /// @dev For ERC20: uses transferFrom. For ETH: expects msg.value
+    function depositCollateral(address member, uint256 amount) external payable onlyCommuneOS {
         if (amount == 0) revert InvalidDepositAmount();
 
-        bool success = collateralToken.transferFrom(member, address(this), amount);
-        if (!success) revert TransferFailed();
+        if (useERC20) {
+            // ERC20 token transfer
+            bool success = collateralToken.transferFrom(member, address(this), amount);
+            if (!success) revert TransferFailed();
+        } else {
+            // Native ETH transfer
+            if (msg.value != amount) revert InvalidDepositAmount();
+        }
 
         collateralBalance[member] += amount;
         emit CollateralDeposited(member, amount);
@@ -44,11 +55,19 @@ contract CollateralManager is ICollateralManager {
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
+    /// @dev For ERC20: uses token.transfer. For ETH: uses call
     function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
         collateralBalance[member] -= amount; // Will revert if insufficient balance
 
-        bool success = collateralToken.transfer(recipient, amount);
-        if (!success) revert TransferFailed();
+        if (useERC20) {
+            // ERC20 token transfer
+            bool success = collateralToken.transfer(recipient, amount);
+            if (!success) revert TransferFailed();
+        } else {
+            // Native ETH transfer
+            (bool success,) = recipient.call{value: amount}("");
+            if (!success) revert TransferFailed();
+        }
 
         emit CollateralSlashed(member, amount, recipient);
     }

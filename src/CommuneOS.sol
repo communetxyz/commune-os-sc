@@ -41,7 +41,7 @@ contract CommuneOS is ICommuneOS {
         bool collateralRequired,
         uint256 collateralAmount,
         ChoreSchedule[] memory choreSchedules
-    ) external returns (uint256 communeId) {
+    ) external payable returns (uint256 communeId) {
         // Create the commune
         communeId = communeRegistry.createCommune(name, msg.sender, collateralRequired, collateralAmount);
 
@@ -50,8 +50,15 @@ contract CommuneOS is ICommuneOS {
             choreScheduler.addChores(communeId, choreSchedules);
         }
 
-        // Register creator as first member (no collateral required for creator)
-        memberRegistry.registerMember(communeId, msg.sender, 0);
+        // Deposit collateral if required (creator must also deposit)
+        uint256 depositedCollateral = 0;
+        if (collateralRequired) {
+            depositedCollateral = collateralAmount;
+            collateralManager.depositCollateral{value: msg.value}(msg.sender, collateralAmount);
+        }
+
+        // Register creator as first member
+        memberRegistry.registerMember(communeId, msg.sender, depositedCollateral);
 
         return communeId;
     }
@@ -60,18 +67,18 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external {
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
         // Validate the invite
         if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
 
         // Get commune details
         Commune memory commune = communeRegistry.getCommune(communeId);
 
-        // Check collateral requirement and deposit via transferFrom
+        // Check collateral requirement and deposit
         uint256 collateralAmount = 0;
         if (commune.collateralRequired) {
             collateralAmount = commune.collateralAmount;
-            collateralManager.depositCollateral(msg.sender, collateralAmount);
+            collateralManager.depositCollateral{value: msg.value}(msg.sender, collateralAmount);
         }
 
         // Mark nonce as used
@@ -108,11 +115,14 @@ contract CommuneOS is ICommuneOS {
         uint256 dueDate,
         address assignedTo
     ) external returns (uint256 expenseId) {
-        // Verify creator is a member
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
+        // Verify both creator and assignee are members
+        address[] memory addresses = new address[](2);
+        addresses[0] = msg.sender;
+        addresses[1] = assignedTo;
+        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
 
-        // Verify assignee is a member
-        if (!memberRegistry.isMember(communeId, assignedTo)) revert AssigneeNotAMember();
+        if (!results[0]) revert NotAMember();
+        if (!results[1]) revert AssigneeNotAMember();
 
         // Create expense
         return expenseManager.createExpense(communeId, amount, description, dueDate, assignedTo);
@@ -137,11 +147,14 @@ contract CommuneOS is ICommuneOS {
         external
         returns (uint256 disputeId)
     {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
+        // Verify both disputer and new assignee are members
+        address[] memory addresses = new address[](2);
+        addresses[0] = msg.sender;
+        addresses[1] = newAssignee;
+        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
 
-        // Verify new assignee is a member
-        if (!memberRegistry.isMember(communeId, newAssignee)) revert NewAssigneeNotAMember();
+        if (!results[0]) revert NotAMember();
+        if (!results[1]) revert NewAssigneeNotAMember();
 
         // Create dispute
         disputeId = votingModule.createDispute(expenseId, newAssignee);

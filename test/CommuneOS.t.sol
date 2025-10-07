@@ -33,6 +33,7 @@ contract CommuneOSTest is Test {
         member3 = vm.addr(member3PrivateKey);
 
         // Mint tokens for testing
+        token.mint(creator, 100 ether);
         token.mint(member1, 100 ether);
         token.mint(member2, 100 ether);
         token.mint(member3, 100 ether);
@@ -46,6 +47,8 @@ contract CommuneOSTest is Test {
         schedules[1] =
             ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp});
 
+        // Approve collateral for creator
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         assertEq(communeId, 0);
@@ -68,6 +71,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         // Generate invite signature
@@ -191,6 +195,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         vm.stopPrank();
@@ -274,6 +279,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
         uint256 nonce = 1;

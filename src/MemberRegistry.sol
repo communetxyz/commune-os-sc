@@ -56,6 +56,18 @@ contract MemberRegistry is IMemberRegistry {
         return members[memberAddress].active && members[memberAddress].communeId == communeId;
     }
 
+    /// @notice Check if multiple addresses are members of a commune
+    /// @param communeId The commune ID
+    /// @param addresses Array of addresses to check
+    /// @return results Array of booleans indicating membership status
+    function areMembers(uint256 communeId, address[] memory addresses) external view returns (bool[] memory results) {
+        results = new bool[](addresses.length);
+        for (uint256 i = 0; i < addresses.length; i++) {
+            results[i] = members[addresses[i]].active && members[addresses[i]].communeId == communeId;
+        }
+        return results;
+    }
+
     /// @notice Get all members of a commune
     /// @param communeId The commune ID
     /// @return address[] Array of member addresses
