@@ -45,9 +45,9 @@ contract CommuneOS is ICommuneOS {
         // Create the commune
         communeId = communeRegistry.createCommune(name, msg.sender, collateralRequired, collateralAmount);
 
-        // Initialize chore schedules if provided
+        // Add chore schedules if provided
         if (choreSchedules.length > 0) {
-            choreScheduler.initializeChores(communeId, choreSchedules);
+            choreScheduler.addChores(communeId, choreSchedules);
         }
 
         // Register creator as first member (no collateral required for creator)

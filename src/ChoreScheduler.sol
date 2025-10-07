@@ -14,26 +14,32 @@ contract ChoreScheduler is IChoreScheduler {
     // CommuneId => ChoreId => Period => completion status
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
 
-    /// @notice Initialize chore schedules for a commune
+    /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID
-    /// @param schedules Array of chore schedules to initialize
-    function initializeChores(uint256 communeId, ChoreSchedule[] memory schedules) external {
+    /// @param schedules Array of chore schedules to add
+    function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external {
         if (schedules.length == 0) revert NoSchedulesProvided();
-        if (choreSchedules[communeId].length > 0) revert AlreadyInitialized();
+
+        uint256 currentChoreCount = choreSchedules[communeId].length;
 
         for (uint256 i = 0; i < schedules.length; i++) {
             if (schedules[i].frequency == 0) revert InvalidFrequency();
             if (bytes(schedules[i].title).length == 0) revert EmptyTitle();
+            if (schedules[i].startTime == 0) revert InvalidStartTime();
+            if (schedules[i].assignedTo == address(0)) revert InvalidAssignedMember();
+
+            uint256 choreId = currentChoreCount + i;
 
             ChoreSchedule memory schedule = ChoreSchedule({
-                id: i,
+                id: choreId,
                 title: schedules[i].title,
                 frequency: schedules[i].frequency,
-                startTime: schedules[i].startTime > 0 ? schedules[i].startTime : block.timestamp
+                startTime: schedules[i].startTime,
+                assignedTo: schedules[i].assignedTo
             });
 
             choreSchedules[communeId].push(schedule);
-            emit ChoreScheduleInitialized(communeId, i, schedule.title);
+            emit ChoreAdded(communeId, choreId, schedule.title, schedule.assignedTo);
         }
     }
 

@@ -7,19 +7,20 @@ import "../Types.sol";
 /// @notice Interface for managing chore schedules and completions
 interface IChoreScheduler {
     // Events
-    event ChoreScheduleInitialized(uint256 indexed communeId, uint256 indexed choreId, string title);
+    event ChoreAdded(uint256 indexed communeId, uint256 indexed choreId, string title, address indexed assignedTo);
     event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
 
     // Errors
     error NoSchedulesProvided();
-    error AlreadyInitialized();
     error InvalidFrequency();
     error EmptyTitle();
     error InvalidChoreId();
     error AlreadyCompleted();
+    error InvalidStartTime();
+    error InvalidAssignedMember();
 
     // Functions
-    function initializeChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
+    function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
 
     function markChoreComplete(uint256 communeId, uint256 choreId) external;
 

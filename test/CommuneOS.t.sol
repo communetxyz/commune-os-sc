@@ -34,9 +34,20 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](2);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
-        schedules[1] =
-            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            assignedTo: creator
+        });
+        schedules[1] = ChoreSchedule({
+            id: 1,
+            title: "Bathroom Cleaning",
+            frequency: 1 weeks,
+            startTime: block.timestamp,
+            assignedTo: creator
+        });
 
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
@@ -90,7 +101,13 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            assignedTo: creator
+        });
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
@@ -238,7 +255,13 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Daily Chore",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            assignedTo: creator
+        });
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
