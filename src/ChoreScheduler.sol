@@ -8,16 +8,27 @@ import "./interfaces/IChoreScheduler.sol";
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage
 contract ChoreScheduler is IChoreScheduler {
+    address public immutable communeOS;
+
     // CommuneId => array of ChoreSchedules
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
 
     // CommuneId => ChoreId => Period => completion status
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
 
+    constructor() {
+        communeOS = msg.sender;
+    }
+
+    modifier onlyCommuneOS() {
+        if (msg.sender != communeOS) revert Unauthorized();
+        _;
+    }
+
     /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID
     /// @param schedules Array of chore schedules to add
-    function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external {
+    function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external onlyCommuneOS {
         if (schedules.length == 0) revert NoSchedulesProvided();
 
         uint256 currentChoreCount = choreSchedules[communeId].length;
@@ -46,7 +57,7 @@ contract ChoreScheduler is IChoreScheduler {
     /// @notice Mark a chore as complete for the current period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
-    function markChoreComplete(uint256 communeId, uint256 choreId) external {
+    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         uint256 period = getCurrentPeriod(communeId, choreId);

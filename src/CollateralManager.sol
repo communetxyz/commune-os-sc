@@ -6,12 +6,23 @@ import "./interfaces/ICollateralManager.sol";
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
 contract CollateralManager is ICollateralManager {
+    address public immutable communeOS;
+
     // Member address => collateral balance
     mapping(address => uint256) public collateralBalance;
 
+    constructor() {
+        communeOS = msg.sender;
+    }
+
+    modifier onlyCommuneOS() {
+        if (msg.sender != communeOS) revert Unauthorized();
+        _;
+    }
+
     /// @notice Deposit collateral for a member
     /// @param member The member address
-    function depositCollateral(address member) external payable {
+    function depositCollateral(address member) external payable onlyCommuneOS {
         if (msg.value == 0) revert InvalidDepositAmount();
         collateralBalance[member] += msg.value;
         emit CollateralDeposited(member, msg.value);
@@ -24,6 +35,7 @@ contract CollateralManager is ICollateralManager {
     /// @return actualSlashed The actual amount slashed (may be less if insufficient collateral)
     function slashCollateral(address member, uint256 amount, address recipient)
         external
+        onlyCommuneOS
         returns (uint256 actualSlashed)
     {
         uint256 available = collateralBalance[member];

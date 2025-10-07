@@ -11,6 +11,7 @@ interface IChoreScheduler {
     event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
 
     // Errors
+    error Unauthorized();
     error NoSchedulesProvided();
     error InvalidFrequency();
     error EmptyTitle();

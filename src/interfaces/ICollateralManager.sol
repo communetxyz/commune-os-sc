@@ -9,6 +9,7 @@ interface ICollateralManager {
     event CollateralSlashed(address indexed member, uint256 amount, address indexed recipient);
 
     // Errors
+    error Unauthorized();
     error InvalidDepositAmount();
     error TransferFailed();
 

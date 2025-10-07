@@ -7,17 +7,31 @@ import "./interfaces/IMemberRegistry.sol";
 /// @title MemberRegistry
 /// @notice Manages commune members and their status
 contract MemberRegistry is IMemberRegistry {
+    address public immutable communeOS;
+
     // CommuneId => array of member addresses
     mapping(uint256 => address[]) public communeMembers;
 
     // Member address => Member data
     mapping(address => Member) public members;
 
+    constructor() {
+        communeOS = msg.sender;
+    }
+
+    modifier onlyCommuneOS() {
+        if (msg.sender != communeOS) revert Unauthorized();
+        _;
+    }
+
     /// @notice Register a new member to a commune
     /// @param communeId The commune ID
     /// @param memberAddress The member's address
     /// @param collateralAmount The collateral deposited
-    function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) external {
+    function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount)
+        external
+        onlyCommuneOS
+    {
         if (memberAddress == address(0)) revert InvalidAddress();
         if (members[memberAddress].active) revert AlreadyRegistered();
 

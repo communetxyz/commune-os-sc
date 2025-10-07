@@ -10,6 +10,7 @@ interface IMemberRegistry {
     event MemberRegistered(address indexed member, uint256 indexed communeId, uint256 collateral, uint256 timestamp);
 
     // Errors
+    error Unauthorized();
     error InvalidAddress();
     error AlreadyRegistered();
 

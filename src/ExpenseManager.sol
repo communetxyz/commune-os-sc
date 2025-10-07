@@ -7,6 +7,8 @@ import "./interfaces/IExpenseManager.sol";
 /// @title ExpenseManager
 /// @notice Manages expense lifecycle including creation, assignment, payments, and disputes
 contract ExpenseManager is IExpenseManager {
+    address public immutable communeOS;
+
     // ExpenseId (global) => Expense
     mapping(uint256 => Expense) public expenses;
 
@@ -27,6 +29,15 @@ contract ExpenseManager is IExpenseManager {
 
     uint256 public expenseCount;
 
+    constructor() {
+        communeOS = msg.sender;
+    }
+
+    modifier onlyCommuneOS() {
+        if (msg.sender != communeOS) revert Unauthorized();
+        _;
+    }
+
     /// @notice Create a new expense with direct assignment
     /// @param communeId The commune ID
     /// @param amount The expense amount
@@ -40,7 +51,7 @@ contract ExpenseManager is IExpenseManager {
         string memory description,
         uint256 dueDate,
         address assignedTo
-    ) external returns (uint256 expenseId) {
+    ) external onlyCommuneOS returns (uint256 expenseId) {
         if (assignedTo == address(0)) revert InvalidAssignee();
         if (amount == 0) revert InvalidAmount();
         if (bytes(description).length == 0) revert EmptyDescription();
@@ -69,7 +80,7 @@ contract ExpenseManager is IExpenseManager {
 
     /// @notice Mark an expense as paid
     /// @param expenseId The expense ID
-    function markExpensePaid(uint256 expenseId) external {
+    function markExpensePaid(uint256 expenseId) external onlyCommuneOS {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
         if (expenses[expenseId].paid) revert AlreadyPaid();
 
@@ -82,7 +93,7 @@ contract ExpenseManager is IExpenseManager {
     /// @notice Mark an expense as disputed
     /// @param expenseId The expense ID
     /// @param disputeId The dispute ID from VotingModule
-    function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external {
+    function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external onlyCommuneOS {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
 
         expenses[expenseId].disputed = true;
@@ -94,7 +105,7 @@ contract ExpenseManager is IExpenseManager {
     /// @notice Reassign an expense to a new member (after dispute resolution)
     /// @param expenseId The expense ID
     /// @param newAssignee The new assignee
-    function reassignExpense(uint256 expenseId, address newAssignee) external {
+    function reassignExpense(uint256 expenseId, address newAssignee) external onlyCommuneOS {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
         if (newAssignee == address(0)) revert InvalidAssignee();
 

@@ -7,6 +7,8 @@ import "./interfaces/ICommuneRegistry.sol";
 /// @title CommuneRegistry
 /// @notice Creates and manages communes with invite-based access
 contract CommuneRegistry is ICommuneRegistry {
+    address public immutable communeOS;
+
     // CommuneId => Commune data
     mapping(uint256 => Commune) public communes;
 
@@ -14,6 +16,15 @@ contract CommuneRegistry is ICommuneRegistry {
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
 
     uint256 public communeCount;
+
+    constructor() {
+        communeOS = msg.sender;
+    }
+
+    modifier onlyCommuneOS() {
+        if (msg.sender != communeOS) revert Unauthorized();
+        _;
+    }
 
     /// @notice Create a new commune
     /// @param name The commune name
@@ -23,6 +34,7 @@ contract CommuneRegistry is ICommuneRegistry {
     /// @return communeId The ID of the created commune
     function createCommune(string memory name, address creator, bool collateralRequired, uint256 collateralAmount)
         external
+        onlyCommuneOS
         returns (uint256 communeId)
     {
         if (bytes(name).length == 0) revert EmptyName();
@@ -67,7 +79,7 @@ contract CommuneRegistry is ICommuneRegistry {
     /// @notice Mark a nonce as used
     /// @param communeId The commune ID
     /// @param nonce The nonce to mark as used
-    function markNonceUsed(uint256 communeId, uint256 nonce) external {
+    function markNonceUsed(uint256 communeId, uint256 nonce) external onlyCommuneOS {
         if (communeId >= communeCount) revert InvalidCommuneId();
         if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
         usedNonces[communeId][nonce] = true;

@@ -7,6 +7,8 @@ import "./interfaces/IVotingModule.sol";
 /// @title VotingModule
 /// @notice Manages voting on expense disputes
 contract VotingModule is IVotingModule {
+    address public immutable communeOS;
+
     // DisputeId => Dispute data
     mapping(uint256 => Dispute) public disputes;
 
@@ -18,11 +20,24 @@ contract VotingModule is IVotingModule {
 
     uint256 public disputeCount;
 
+    constructor() {
+        communeOS = msg.sender;
+    }
+
+    modifier onlyCommuneOS() {
+        if (msg.sender != communeOS) revert Unauthorized();
+        _;
+    }
+
     /// @notice Create a new dispute for an expense
     /// @param expenseId The expense being disputed
     /// @param proposedNewAssignee The proposed new assignee
     /// @return disputeId The ID of the created dispute
-    function createDispute(uint256 expenseId, address proposedNewAssignee) external returns (uint256 disputeId) {
+    function createDispute(uint256 expenseId, address proposedNewAssignee)
+        external
+        onlyCommuneOS
+        returns (uint256 disputeId)
+    {
         if (proposedNewAssignee == address(0)) revert InvalidAssignee();
 
         disputeId = disputeCount++;
@@ -45,7 +60,7 @@ contract VotingModule is IVotingModule {
     /// @param disputeId The dispute ID
     /// @param voter The address of the voter
     /// @param support True to support the dispute, false to reject
-    function voteOnDispute(uint256 disputeId, address voter, bool support) external {
+    function voteOnDispute(uint256 disputeId, address voter, bool support) external onlyCommuneOS {
         if (disputeId >= disputeCount) revert InvalidDisputeId();
         if (disputes[disputeId].resolved) revert AlreadyResolved();
         if (hasVoted[disputeId][voter]) revert AlreadyVoted();
@@ -66,7 +81,7 @@ contract VotingModule is IVotingModule {
     /// @param disputeId The dispute ID
     /// @param totalMembers Total number of commune members
     /// @return upheld True if dispute was upheld
-    function resolveDispute(uint256 disputeId, uint256 totalMembers) external returns (bool upheld) {
+    function resolveDispute(uint256 disputeId, uint256 totalMembers) external onlyCommuneOS returns (bool upheld) {
         if (disputeId >= disputeCount) revert InvalidDisputeId();
         if (disputes[disputeId].resolved) revert AlreadyResolved();
 
