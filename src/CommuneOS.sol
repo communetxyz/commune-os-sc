@@ -176,31 +176,6 @@ contract CommuneOS is ICommuneOS {
         votingModule.voteOnDispute(disputeId, msg.sender, support);
     }
 
-    /// @notice Resolve a dispute and handle collateral slashing if upheld
-    /// @param communeId The commune ID
-    /// @param disputeId The dispute ID
-    function resolveDispute(uint256 communeId, uint256 disputeId) external {
-        // Get total member count
-        uint256 totalMembers = memberRegistry.getMemberCount(communeId);
-
-        // Resolve the dispute
-        bool upheld = votingModule.resolveDispute(disputeId, totalMembers);
-
-        if (upheld) {
-            // Get dispute details
-            Dispute memory dispute = votingModule.getDispute(disputeId);
-
-            // Get expense details
-            Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
-
-            // Slash collateral from old assignee
-            collateralManager.slashCollateral(expense.assignedTo, expense.amount, dispute.proposedNewAssignee);
-
-            // Reassign expense to new assignee
-            expenseManager.reassignExpense(dispute.expenseId, dispute.proposedNewAssignee);
-        }
-    }
-
     // View functions
 
     /// @notice Get commune statistics

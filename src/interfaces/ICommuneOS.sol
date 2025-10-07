@@ -42,8 +42,6 @@ interface ICommuneOS {
 
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external;
 
-    function resolveDispute(uint256 communeId, uint256 disputeId) external;
-
     function getCommuneStatistics(uint256 communeId)
         external
         view
