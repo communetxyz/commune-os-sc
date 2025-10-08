@@ -31,6 +31,13 @@ contract CommuneOS is ICommuneOS {
     /// @notice Manager for member collateral deposits and slashing
     CollateralManager public collateralManager;
 
+    /// @notice Modifier to check if caller is a member of the commune
+    /// @param communeId The commune ID to check membership for
+    modifier onlyMember(uint256 communeId) {
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
+        _;
+    }
+
     /// @notice Initializes CommuneOS with all module contracts
     /// @param collateralToken Address of ERC20 token for collateral (address(0) for native ETH)
     /// @dev Creates all module contracts in constructor for atomic deployment
@@ -108,11 +115,7 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param choreSchedules Array of chore schedules to add
     /// @dev Caller must be a member of the commune
-    function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
-        // Add chores
+    function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external onlyMember(communeId) {
         choreScheduler.addChores(communeId, choreSchedules);
     }
 
@@ -120,11 +123,7 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param choreId The chore ID
     /// @dev Caller must be a member of the commune
-    function markChoreComplete(uint256 communeId, uint256 choreId) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
-        // Mark chore complete
+    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyMember(communeId) {
         choreScheduler.markChoreComplete(communeId, choreId);
     }
 
@@ -160,10 +159,7 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param expenseId The expense ID
     /// @dev Caller must be a member of the commune
-    function markExpensePaid(uint256 communeId, uint256 expenseId) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
+    function markExpensePaid(uint256 communeId, uint256 expenseId) external onlyMember(communeId) {
         expenseManager.markExpensePaid(expenseId);
     }
 
@@ -200,10 +196,7 @@ contract CommuneOS is ICommuneOS {
     /// @param disputeId The dispute ID
     /// @param support True to support the dispute
     /// @dev Caller must be a member of the commune. Auto-resolves at 2/3 majority.
-    function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
+    function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external onlyMember(communeId) {
         // Get total member count for the commune
         uint256 totalMembers = memberRegistry.getMemberCount(communeId);
 
