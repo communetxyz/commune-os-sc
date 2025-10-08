@@ -2,19 +2,13 @@
 pragma solidity ^0.8.19;
 
 import {Member} from "./interfaces/IMemberRegistry.sol";
-import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import "./interfaces/IMemberRegistry.sol";
-import "./interfaces/ICommuneRegistry.sol";
-import "./interfaces/ICollateralManager.sol";
 import "./CommuneOSModule.sol";
 
 /// @title MemberRegistry
 /// @notice Manages commune members and their status
 /// @dev Uses memberCommuneId == 0 as sentinel value for non-members
 contract MemberRegistry is CommuneOSModule, IMemberRegistry {
-    /// @notice Reference to the CommuneRegistry contract
-    ICommuneRegistry public communeRegistry;
-
     /// @notice Stores all members for each commune in an array
     /// @dev communeId => Member[]
     mapping(uint256 => Member[]) public communeMembers;
@@ -27,28 +21,17 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @dev communeId => nonce => used
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
 
-    /// @notice Sets the CommuneRegistry reference
-    /// @param _communeRegistry Address of the CommuneRegistry contract
-    /// @dev Can only be called by CommuneOS, typically during initialization
-    function setCommuneRegistry(address _communeRegistry) external onlyCommuneOS {
-        communeRegistry = ICommuneRegistry(_communeRegistry);
-    }
-
-    /// @notice Validates an invite signature and returns commune info
+    /// @notice Validates an invite signature
     /// @param communeId ID of the commune being joined
+    /// @param creatorAddress The address of the commune creator
     /// @param nonce Unique nonce for this invite (prevents replay attacks)
     /// @param signature 65-byte ECDSA signature from the commune creator
-    /// @return commune The commune data if validation succeeds
     /// @dev Checks that: nonce hasn't been used, and signature is from creator
-    function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature)
+    function validateInvite(uint256 communeId, address creatorAddress, uint256 nonce, bytes memory signature)
         external
         view
-        returns (Commune memory commune)
     {
         if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
-
-        // Get commune details
-        commune = communeRegistry.getCommune(communeId);
 
         // Create the message hash
         bytes32 messageHash = getMessageHash(communeId, nonce);
@@ -58,9 +41,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
         address signer = recoverSigner(ethSignedMessageHash, signature);
 
         // Verify the signer is the commune creator
-        if (signer != commune.creator) revert InvalidInvite();
-
-        return commune;
+        if (signer != creatorAddress) revert InvalidInvite();
     }
 
     /// @notice Joins a commune with validated invite

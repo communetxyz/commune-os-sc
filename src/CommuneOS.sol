@@ -48,9 +48,6 @@ contract CommuneOS is ICommuneOS {
         expenseManager = new ExpenseManager();
         votingModule = new VotingModule();
         collateralManager = new CollateralManager(collateralToken);
-
-        // Initialize MemberRegistry with CommuneRegistry reference
-        memberRegistry.setCommuneRegistry(address(communeRegistry));
     }
 
     /// @notice Create a new commune with initial chore schedules
@@ -92,8 +89,11 @@ contract CommuneOS is ICommuneOS {
     /// @param signature The creator's signature
     /// @dev MemberRegistry handles invite validation, nonce tracking, and registration
     function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external {
-        // Validate invite and get commune details from MemberRegistry
-        Commune memory commune = memberRegistry.validateInvite(communeId, nonce, signature);
+        // Get commune details
+        Commune memory commune = communeRegistry.getCommune(communeId);
+
+        // Validate invite signature with MemberRegistry
+        memberRegistry.validateInvite(communeId, commune.creator, nonce, signature);
 
         // Check collateral requirement and deposit
         uint256 collateralAmount = 0;
