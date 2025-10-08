@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Dispute} from "./Types.sol";
+import {Dispute} from "./interfaces/IVotingModule.sol";
 import "./interfaces/IVotingModule.sol";
 import "./CommuneOSModule.sol";
 

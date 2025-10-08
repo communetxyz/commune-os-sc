@@ -1,7 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Commune} from "../Types.sol";
+/// @notice Represents a commune - a group living arrangement with shared responsibilities
+/// @dev Commune IDs start at 1 (0 is reserved as a sentinel value)
+struct Commune {
+    /// @notice Unique identifier for the commune
+    uint256 id;
+    /// @notice Human-readable name of the commune
+    string name;
+    /// @notice Address of the commune creator (can issue invites)
+    address creator;
+    /// @notice Whether members must deposit collateral to join
+    bool collateralRequired;
+    /// @notice Amount of collateral required (in wei or token units)
+    uint256 collateralAmount;
+}
 
 /// @title ICommuneRegistry
 /// @notice Interface for commune creation and invite-based access control

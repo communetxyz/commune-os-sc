@@ -1,7 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {ChoreSchedule} from "../Types.sol";
+/// @notice Represents a recurring chore schedule
+/// @dev Chores are period-based with automatic rotation assignment
+struct ChoreSchedule {
+    /// @notice Unique identifier for the chore within a commune
+    uint256 id;
+    /// @notice Description of the chore
+    string title;
+    /// @notice How often the chore repeats (in seconds)
+    uint256 frequency;
+    /// @notice Unix timestamp when the chore schedule starts
+    uint256 startTime;
+}
 
 /// @title IChoreScheduler
 /// @notice Interface for managing chore schedules and completions

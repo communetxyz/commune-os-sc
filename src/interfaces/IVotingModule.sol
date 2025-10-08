@@ -1,7 +1,24 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Dispute} from "../Types.sol";
+/// @notice Represents a dispute over an expense assignment
+/// @dev Disputes auto-resolve when 2/3 majority is reached
+struct Dispute {
+    /// @notice ID of the expense being disputed
+    uint256 expenseId;
+    /// @notice Address proposed as the new assignee if dispute is upheld
+    address proposedNewAssignee;
+    /// @notice Number of votes in favor of the dispute
+    uint256 votesFor;
+    /// @notice Number of votes against the dispute
+    uint256 votesAgainst;
+    /// @notice Whether the dispute has been resolved
+    bool resolved;
+    /// @notice If resolved, whether the dispute was upheld (true) or rejected (false)
+    bool upheld;
+    /// @notice Unix timestamp when the dispute was created
+    uint256 createdAt;
+}
 
 /// @title IVotingModule
 /// @notice Interface for managing voting on expense disputes

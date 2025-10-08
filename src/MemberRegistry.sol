@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Member} from "./Types.sol";
+import {Member} from "./interfaces/IMemberRegistry.sol";
 import "./interfaces/IMemberRegistry.sol";
 import "./CommuneOSModule.sol";
 

@@ -4,7 +4,11 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../src/CommuneOS.sol";
 import "../src/interfaces/ICommuneOS.sol";
-import "../src/Types.sol";
+import {Commune} from "../src/interfaces/ICommuneRegistry.sol";
+import {Member} from "../src/interfaces/IMemberRegistry.sol";
+import {ChoreSchedule} from "../src/interfaces/IChoreScheduler.sol";
+import {Expense} from "../src/interfaces/IExpenseManager.sol";
+import {Dispute} from "../src/interfaces/IVotingModule.sol";
 import "./MockERC20.sol";
 
 contract CommuneOSTest is Test {

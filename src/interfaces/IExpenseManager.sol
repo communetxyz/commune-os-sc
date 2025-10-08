@@ -1,7 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Expense} from "../Types.sol";
+/// @notice Represents a financial expense within a commune
+/// @dev Expenses can be assigned, paid, and disputed
+struct Expense {
+    /// @notice Global unique identifier for the expense
+    uint256 id;
+    /// @notice ID of the commune this expense belongs to
+    uint256 communeId;
+    /// @notice Amount of the expense (in wei or token units)
+    uint256 amount;
+    /// @notice Description of what the expense is for
+    string description;
+    /// @notice Address of the member assigned to pay this expense
+    address assignedTo;
+    /// @notice Unix timestamp when payment is due
+    uint256 dueDate;
+    /// @notice Whether the expense has been paid
+    bool paid;
+    /// @notice Whether the expense assignment is being disputed
+    bool disputed;
+}
 
 /// @title IExpenseManager
 /// @notice Interface for managing expense lifecycle including creation, assignment, payments, and disputes

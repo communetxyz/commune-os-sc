@@ -1,7 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
-import {Member} from "../Types.sol";
+/// @notice Represents a member of a commune
+/// @dev Members are stored in arrays per commune for efficient iteration
+struct Member {
+    /// @notice Ethereum address of the member
+    address walletAddress;
+    /// @notice ID of the commune this member belongs to
+    uint256 communeId;
+    /// @notice Whether the member is currently active
+    bool active;
+}
 
 /// @title IMemberRegistry
 /// @notice Interface for managing commune members and their status
