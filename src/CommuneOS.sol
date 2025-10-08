@@ -104,6 +104,18 @@ contract CommuneOS is ICommuneOS {
         emit MemberJoined(msg.sender, communeId, collateralAmount, block.timestamp);
     }
 
+    /// @notice Add chore schedules to a commune
+    /// @param communeId The commune ID
+    /// @param choreSchedules Array of chore schedules to add
+    /// @dev Caller must be a member of the commune
+    function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external {
+        // Verify member is part of commune
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
+
+        // Add chores
+        choreScheduler.addChores(communeId, choreSchedules);
+    }
+
     /// @notice Mark a chore as complete
     /// @param communeId The commune ID
     /// @param choreId The chore ID

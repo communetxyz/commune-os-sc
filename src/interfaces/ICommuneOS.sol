@@ -25,6 +25,8 @@ interface ICommuneOS {
 
     function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external;
 
+    function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external;
+
     function markChoreComplete(uint256 communeId, uint256 choreId) external;
 
     function createExpense(
