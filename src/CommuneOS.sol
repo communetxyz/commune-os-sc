@@ -12,15 +12,29 @@ import "./CollateralManager.sol";
 
 /// @title CommuneOS
 /// @notice Main contract integrating all commune management modules
-/// @dev Deployed on Gnosis Chain for low gas fees
+/// @dev Deployed on Gnosis Chain for low gas fees. Coordinates all module interactions.
 contract CommuneOS is ICommuneOS {
+    /// @notice Registry for commune creation and invite validation
     CommuneRegistry public communeRegistry;
+
+    /// @notice Registry for commune member management
     MemberRegistry public memberRegistry;
+
+    /// @notice Scheduler for recurring chore management
     ChoreScheduler public choreScheduler;
+
+    /// @notice Manager for expense tracking and assignment
     ExpenseManager public expenseManager;
+
+    /// @notice Voting system for dispute resolution
     VotingModule public votingModule;
+
+    /// @notice Manager for member collateral deposits and slashing
     CollateralManager public collateralManager;
 
+    /// @notice Initializes CommuneOS with all module contracts
+    /// @param collateralToken Address of ERC20 token for collateral (address(0) for native ETH)
+    /// @dev Creates all module contracts in constructor for atomic deployment
     constructor(address collateralToken) {
         communeRegistry = new CommuneRegistry();
         memberRegistry = new MemberRegistry();
@@ -67,6 +81,7 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
+    /// @dev Validates invite, handles collateral deposit if required, and registers member
     function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
         // Validate the invite
         if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
@@ -93,6 +108,7 @@ contract CommuneOS is ICommuneOS {
     /// @notice Mark a chore as complete
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @dev Caller must be a member of the commune
     function markChoreComplete(uint256 communeId, uint256 choreId) external {
         // Verify member is part of commune
         if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
@@ -108,6 +124,7 @@ contract CommuneOS is ICommuneOS {
     /// @param dueDate Due date
     /// @param assignedTo The member to assign
     /// @return expenseId The created expense ID
+    /// @dev Both caller and assignee must be members of the commune
     function createExpense(
         uint256 communeId,
         uint256 amount,
@@ -131,6 +148,7 @@ contract CommuneOS is ICommuneOS {
     /// @notice Mark an expense as paid
     /// @param communeId The commune ID
     /// @param expenseId The expense ID
+    /// @dev Caller must be a member of the commune
     function markExpensePaid(uint256 communeId, uint256 expenseId) external {
         // Verify member is part of commune
         if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
@@ -143,6 +161,7 @@ contract CommuneOS is ICommuneOS {
     /// @param expenseId The expense ID
     /// @param newAssignee Proposed new assignee
     /// @return disputeId The created dispute ID
+    /// @dev Both caller and new assignee must be members of the commune
     function disputeExpense(uint256 communeId, uint256 expenseId, address newAssignee)
         external
         returns (uint256 disputeId)
@@ -169,6 +188,7 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param disputeId The dispute ID
     /// @param support True to support the dispute
+    /// @dev Caller must be a member of the commune. Auto-resolves at 2/3 majority.
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external {
         // Verify member is part of commune
         if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();

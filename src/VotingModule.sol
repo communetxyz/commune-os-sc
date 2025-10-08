@@ -6,17 +6,22 @@ import "./interfaces/IVotingModule.sol";
 import "./CommuneOSModule.sol";
 
 /// @title VotingModule
-/// @notice Manages voting on expense disputes
+/// @notice Manages voting on expense disputes with automatic 2/3 majority resolution
+/// @dev Disputes auto-resolve when either votesFor or votesAgainst reaches 2/3 of total members
 contract VotingModule is CommuneOSModule, IVotingModule {
-    // DisputeId => Dispute data
+    /// @notice Stores dispute data by dispute ID
+    /// @dev Maps dispute ID => Dispute struct containing all dispute information
     mapping(uint256 => Dispute) public disputes;
 
-    // DisputeId => voter => hasVoted
+    /// @notice Tracks whether an address has voted on a specific dispute
+    /// @dev Maps dispute ID => voter address => has voted (true/false)
     mapping(uint256 => mapping(address => bool)) public hasVoted;
 
-    // DisputeId => voter => vote (true = for, false = against)
+    /// @notice Records the vote choice for each voter on each dispute
+    /// @dev Maps dispute ID => voter address => vote (true = for, false = against)
     mapping(uint256 => mapping(address => bool)) public votes;
 
+    /// @notice Total number of disputes created (also serves as next dispute ID)
     uint256 public disputeCount;
 
     /// @notice Create a new dispute for an expense
@@ -46,11 +51,12 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         return disputeId;
     }
 
-    /// @notice Vote on a dispute and check if 2/3 majority is reached
+    /// @notice Vote on a dispute and automatically resolve if 2/3 majority is reached
     /// @param disputeId The dispute ID
     /// @param voter The address of the voter
     /// @param support True to support the dispute, false to reject
     /// @param totalMembers Total number of commune members
+    /// @dev Auto-resolves when votesFor or votesAgainst reaches (totalMembers * 2) / 3
     function voteOnDispute(uint256 disputeId, address voter, bool support, uint256 totalMembers)
         external
         onlyCommuneOS

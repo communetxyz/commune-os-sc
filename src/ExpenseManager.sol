@@ -7,13 +7,17 @@ import "./CommuneOSModule.sol";
 
 /// @title ExpenseManager
 /// @notice Manages expense lifecycle including creation, assignment, payments, and disputes
+/// @dev Expenses are globally unique and can be assigned, paid, disputed, and reassigned
 contract ExpenseManager is CommuneOSModule, IExpenseManager {
-    // ExpenseId (global) => Expense
+    /// @notice Stores expense data by globally unique expense ID
+    /// @dev Maps expense ID => Expense struct containing all expense information
     mapping(uint256 => Expense) public expenses;
 
-    // ExpenseId => disputeId
+    /// @notice Links expenses to their associated disputes
+    /// @dev Maps expense ID => dispute ID (only set when expense is disputed)
     mapping(uint256 => uint256) public expenseDisputes;
 
+    /// @notice Total number of expenses created (also serves as next expense ID)
     uint256 public expenseCount;
 
     /// @notice Create a new expense with direct assignment
@@ -77,6 +81,7 @@ contract ExpenseManager is CommuneOSModule, IExpenseManager {
     /// @notice Reassign an expense to a new member (after dispute resolution)
     /// @param expenseId The expense ID
     /// @param newAssignee The new assignee
+    /// @dev Resets the paid status to false when reassigning
     function reassignExpense(uint256 expenseId, address newAssignee) external onlyCommuneOS {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
         if (newAssignee == address(0)) revert InvalidAssignee();
@@ -108,6 +113,7 @@ contract ExpenseManager is CommuneOSModule, IExpenseManager {
     /// @notice Get all expenses for a commune
     /// @param communeId The commune ID
     /// @return Expense[] Array of expenses
+    /// @dev Iterates through all expenses and filters by commune ID (O(n) complexity)
     function getCommuneExpenses(uint256 communeId) external view returns (Expense[] memory) {
         // First, count how many expenses belong to this commune
         uint256 count = 0;

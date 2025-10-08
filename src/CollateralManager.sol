@@ -13,13 +13,20 @@ interface IERC20 {
 /// @notice Manages collateral deposits and slashing (no withdrawals)
 /// @dev Supports both native ETH and ERC20 tokens for collateral
 contract CollateralManager is CommuneOSModule, ICollateralManager {
+    /// @notice The ERC20 token contract used for collateral (if applicable)
+    /// @dev Set to address(0) when using native ETH
     IERC20 public immutable collateralToken;
+
+    /// @notice Whether this contract uses ERC20 tokens (true) or native ETH (false)
     bool public immutable useERC20;
 
-    // Member address => collateral balance
+    /// @notice Tracks collateral balance for each member
+    /// @dev Maps member address => collateral balance in wei or token units
     mapping(address => uint256) public collateralBalance;
 
+    /// @notice Initializes the CollateralManager with token configuration
     /// @param _collateralToken Address of ERC20 token (address(0) for native ETH)
+    /// @dev Sets useERC20 flag based on whether token address is provided
     constructor(address _collateralToken) {
         useERC20 = _collateralToken != address(0);
         collateralToken = IERC20(_collateralToken); // Safe to set even if address(0)
