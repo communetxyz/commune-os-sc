@@ -143,8 +143,7 @@ contract CommuneOS is ICommuneOS {
         addresses[1] = assignedTo;
         bool[] memory results = memberRegistry.areMembers(communeId, addresses);
 
-        if (!results[0]) revert NotAMember();
-        if (!results[1]) revert NotAMember();
+        if (!results[0] || !results[1]) revert NotAMember();
 
         // Create expense
         return expenseManager.createExpense(communeId, amount, description, dueDate, assignedTo);
