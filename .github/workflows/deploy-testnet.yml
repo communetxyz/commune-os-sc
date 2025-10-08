@@ -51,7 +51,6 @@ jobs:
             --rpc-url $HOLESKY_RPC_URL \
             --broadcast \
             --slow \
-            --fs-permissions config/=read \
             -vvvv)
 
           echo "$DEPLOY_OUTPUT"
