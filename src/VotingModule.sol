@@ -46,11 +46,15 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         return disputeId;
     }
 
-    /// @notice Vote on a dispute
+    /// @notice Vote on a dispute and check if 2/3 majority is reached
     /// @param disputeId The dispute ID
     /// @param voter The address of the voter
     /// @param support True to support the dispute, false to reject
-    function voteOnDispute(uint256 disputeId, address voter, bool support) external onlyCommuneOS {
+    /// @param totalMembers Total number of commune members
+    function voteOnDispute(uint256 disputeId, address voter, bool support, uint256 totalMembers)
+        external
+        onlyCommuneOS
+    {
         if (disputeId >= disputeCount) revert InvalidDisputeId();
         if (disputes[disputeId].resolved) revert AlreadyResolved();
         if (hasVoted[disputeId][voter]) revert AlreadyVoted();
@@ -58,36 +62,30 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         hasVoted[disputeId][voter] = true;
         votes[disputeId][voter] = support;
 
+        Dispute storage dispute = disputes[disputeId];
+
         if (support) {
-            disputes[disputeId].votesFor++;
+            dispute.votesFor++;
         } else {
-            disputes[disputeId].votesAgainst++;
+            dispute.votesAgainst++;
         }
 
         emit VoteCast(disputeId, voter, support);
-    }
 
-    /// @notice Resolve a dispute based on votes
-    /// @param disputeId The dispute ID
-    /// @param totalMembers Total number of commune members
-    /// @return upheld True if dispute was upheld
-    function resolveDispute(uint256 disputeId, uint256 totalMembers) external onlyCommuneOS returns (bool upheld) {
-        if (disputeId >= disputeCount) revert InvalidDisputeId();
-        if (disputes[disputeId].resolved) revert AlreadyResolved();
+        // Check if 2/3 majority has been reached (either for or against)
+        uint256 requiredVotes = (totalMembers * 2) / 3;
 
-        Dispute storage dispute = disputes[disputeId];
-
-        // Simple majority: more than 50% of members voted in favor
-        uint256 totalVotes = dispute.votesFor + dispute.votesAgainst;
-        if (totalVotes == 0) revert NoVotesCast();
-
-        upheld = dispute.votesFor > dispute.votesAgainst;
-
-        dispute.resolved = true;
-        dispute.upheld = upheld;
-
-        emit DisputeResolved(disputeId, upheld);
-        return upheld;
+        if (dispute.votesFor >= requiredVotes) {
+            // 2/3 voted in favor - dispute is upheld
+            dispute.resolved = true;
+            dispute.upheld = true;
+            emit DisputeResolved(disputeId, true);
+        } else if (dispute.votesAgainst >= requiredVotes) {
+            // 2/3 voted against - dispute is rejected
+            dispute.resolved = true;
+            dispute.upheld = false;
+            emit DisputeResolved(disputeId, false);
+        }
     }
 
     /// @notice Get dispute details

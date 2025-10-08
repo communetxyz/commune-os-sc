@@ -173,7 +173,10 @@ contract CommuneOS is ICommuneOS {
         // Verify member is part of commune
         if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
 
-        votingModule.voteOnDispute(disputeId, msg.sender, support);
+        // Get total member count for the commune
+        uint256 totalMembers = memberRegistry.getMemberCount(communeId);
+
+        votingModule.voteOnDispute(disputeId, msg.sender, support, totalMembers);
     }
 
     // View functions

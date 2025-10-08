@@ -16,14 +16,11 @@ interface IVotingModule {
     error InvalidDisputeId();
     error AlreadyResolved();
     error AlreadyVoted();
-    error NoVotesCast();
 
     // Functions
     function createDispute(uint256 expenseId, address proposedNewAssignee) external returns (uint256 disputeId);
 
-    function voteOnDispute(uint256 disputeId, address voter, bool support) external;
-
-    function resolveDispute(uint256 disputeId, uint256 totalMembers) external returns (bool upheld);
+    function voteOnDispute(uint256 disputeId, address voter, bool support, uint256 totalMembers) external;
 
     function getDispute(uint256 disputeId) external view returns (Dispute memory);
 

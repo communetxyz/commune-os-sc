@@ -216,23 +216,26 @@ contract CommuneOSTest is Test {
         uint256 disputeId = communeOS.disputeExpense(communeId, expenseId, member3);
         vm.stopPrank();
 
-        // Members vote on dispute
+        // Members vote on dispute - need 2/3 majority (4 members total, so 2 votes needed)
         vm.prank(creator);
         communeOS.voteOnDispute(communeId, disputeId, true);
+
+        // Check dispute is not yet resolved after 1 vote
+        Dispute memory disputeAfterVote1 = communeOS.votingModule().getDispute(disputeId);
+        assertEq(disputeAfterVote1.votesFor, 1);
+        assertFalse(disputeAfterVote1.resolved);
 
         vm.prank(member2);
         communeOS.voteOnDispute(communeId, disputeId, true);
 
-        vm.prank(member3);
-        communeOS.voteOnDispute(communeId, disputeId, true);
-
-        // Verify dispute was created and votes recorded
+        // After 2nd vote, 2/3 majority is reached and dispute auto-resolves
         Dispute memory dispute = communeOS.votingModule().getDispute(disputeId);
         assertEq(dispute.expenseId, expenseId);
         assertEq(dispute.proposedNewAssignee, member3);
-        assertEq(dispute.votesFor, 3); // creator, member2, and member3 voted for
+        assertEq(dispute.votesFor, 2); // creator and member2 voted for
         assertEq(dispute.votesAgainst, 0);
-        assertFalse(dispute.resolved); // Disputes remain unresolved unless consensus reached
+        assertTrue(dispute.resolved); // Auto-resolved when 2/3 majority reached
+        assertTrue(dispute.upheld); // Dispute was upheld
 
         // Verify expense is marked as disputed
         Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
