@@ -1,66 +1,78 @@
-## Foundry
+# CommuneOS Smart Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Smart contracts for managing communal living arrangements on Gnosis Chain.
 
-Foundry consists of:
+## Overview
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+CommuneOS provides on-chain infrastructure for communes (shared living spaces) to manage:
+- **Invite-based membership** with optional collateral requirements
+- **Rotating chore schedules** with automatic assignment
+- **Expense tracking** with direct assignment and dispute resolution
+- **Transparent voting** with 2/3 majority auto-resolution
+
+## Architecture
+
+CommuneOS uses a modular architecture with 7 contracts:
+
+- **CommuneOS** - Main orchestrator contract
+- **CommuneRegistry** - Commune creation and invite validation
+- **MemberRegistry** - Member tracking and batch operations
+- **ChoreScheduler** - Period-based chore scheduling with rotation
+- **ExpenseManager** - Expense lifecycle and disputes
+- **VotingModule** - 2/3 majority voting for disputes
+- **CollateralManager** - Collateral deposits (ETH or ERC20)
 
 ## Documentation
 
-https://book.getfoundry.sh/
+- **[SPEC.md](./SPEC.md)** - Complete technical specification
+- **[QUICKSTART.md](./QUICKSTART.md)** - Quick start guide
+- **Contracts** - All contracts have comprehensive NatSpec documentation
 
-## Usage
+## Development
+
+Built with [Foundry](https://book.getfoundry.sh/).
 
 ### Build
 
-```shell
-$ forge build
+```bash
+forge build
 ```
 
 ### Test
 
-```shell
-$ forge test
+```bash
+forge test
 ```
 
 ### Format
 
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
+```bash
+forge fmt
 ```
 
 ### Deploy
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+```bash
+# Set environment variables
+export PRIVATE_KEY=<your_private_key>
+export COLLATERAL_TOKEN=<token_address_or_0x0_for_ETH>
+
+# Deploy to testnet
+forge script script/Deploy.s.sol:DeployScript \
+  --rpc-url <rpc_url> \
+  --broadcast
 ```
 
-### Cast
+## Deployment
 
-```shell
-$ cast <subcommand>
-```
+### Testnet (Holesky)
+Automated deployment via GitHub Actions on PR and push to main.
 
-### Help
+### Production (Gnosis Chain)
+Automated deployment via GitHub Actions on push to main.
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+See [.github/workflows](./.github/workflows) for CI/CD configuration.
+
+## License
+
+MIT
