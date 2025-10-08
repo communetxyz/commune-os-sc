@@ -39,7 +39,7 @@ contract CommuneOS is ICommuneOS {
     }
 
     /// @notice Initializes CommuneOS with all module contracts
-    /// @param collateralToken Address of ERC20 token for collateral (address(0) for native ETH)
+    /// @param collateralToken Address of ERC20 token for collateral
     /// @dev Creates all module contracts in constructor for atomic deployment
     constructor(address collateralToken) {
         communeRegistry = new CommuneRegistry();
@@ -48,6 +48,9 @@ contract CommuneOS is ICommuneOS {
         expenseManager = new ExpenseManager();
         votingModule = new VotingModule();
         collateralManager = new CollateralManager(collateralToken);
+
+        // Initialize MemberRegistry with CommuneRegistry reference
+        memberRegistry.setCommuneRegistry(address(communeRegistry));
     }
 
     /// @notice Create a new commune with initial chore schedules
@@ -87,13 +90,10 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
-    /// @dev Validates invite, handles collateral deposit if required, and registers member
+    /// @dev MemberRegistry handles invite validation, nonce tracking, and registration
     function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external {
-        // Validate the invite
-        if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
-
-        // Get commune details
-        Commune memory commune = communeRegistry.getCommune(communeId);
+        // Validate invite and get commune details from MemberRegistry
+        Commune memory commune = memberRegistry.validateInvite(communeId, nonce, signature);
 
         // Check collateral requirement and deposit
         uint256 collateralAmount = 0;
@@ -102,13 +102,8 @@ contract CommuneOS is ICommuneOS {
             collateralManager.depositCollateral(msg.sender, collateralAmount);
         }
 
-        // Mark nonce as used
-        communeRegistry.markNonceUsed(communeId, nonce);
-
-        // Register the member
-        memberRegistry.registerMember(communeId, msg.sender, collateralAmount);
-
-        emit MemberJoined(msg.sender, communeId, collateralAmount, block.timestamp);
+        // Register the member via MemberRegistry (which marks nonce as used)
+        memberRegistry.joinCommune(communeId, msg.sender, nonce, collateralAmount);
     }
 
     /// @notice Add chore schedules to a commune

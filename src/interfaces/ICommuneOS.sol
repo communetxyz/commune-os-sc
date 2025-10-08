@@ -6,11 +6,7 @@ import {ChoreSchedule} from "./IChoreScheduler.sol";
 import {Expense} from "./IExpenseManager.sol";
 
 interface ICommuneOS {
-    // Events
-    event MemberJoined(address indexed member, uint256 indexed communeId, uint256 collateralAmount, uint256 timestamp);
-
     // Errors
-    error InvalidInvite();
     error InsufficientCollateral();
     error NotAMember();
     error AssigneeNotAMember();

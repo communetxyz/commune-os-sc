@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.19;
 
+import {Commune} from "./ICommuneRegistry.sol";
+
 /// @notice Represents a member of a commune
 /// @dev Members are stored in arrays per commune for efficient iteration
 struct Member {
@@ -17,12 +19,26 @@ struct Member {
 interface IMemberRegistry {
     // Events
     event MemberRegistered(address indexed member, uint256 indexed communeId, uint256 collateral, uint256 timestamp);
+    event MemberJoined(address indexed member, uint256 indexed communeId, uint256 collateralAmount, uint256 timestamp);
 
     // Errors
     error InvalidAddress();
     error AlreadyRegistered();
+    error InvalidInvite();
+    error NonceAlreadyUsed();
 
     // Functions
+    function setCommuneRegistry(address _communeRegistry) external;
+
+    function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature)
+        external
+        view
+        returns (Commune memory commune);
+
+    function joinCommune(uint256 communeId, address memberAddress, uint256 nonce, uint256 collateralAmount) external;
+
+    function isNonceUsed(uint256 communeId, uint256 nonce) external view returns (bool);
+
     function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) external;
 
     function isMember(uint256 communeId, address memberAddress) external view returns (bool);

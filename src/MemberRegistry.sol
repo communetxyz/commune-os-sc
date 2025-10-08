@@ -2,13 +2,19 @@
 pragma solidity ^0.8.19;
 
 import {Member} from "./interfaces/IMemberRegistry.sol";
+import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import "./interfaces/IMemberRegistry.sol";
+import "./interfaces/ICommuneRegistry.sol";
+import "./interfaces/ICollateralManager.sol";
 import "./CommuneOSModule.sol";
 
 /// @title MemberRegistry
 /// @notice Manages commune members and their status
 /// @dev Uses memberCommuneId == 0 as sentinel value for non-members
 contract MemberRegistry is CommuneOSModule, IMemberRegistry {
+    /// @notice Reference to the CommuneRegistry contract
+    ICommuneRegistry public communeRegistry;
+
     /// @notice Stores all members for each commune in an array
     /// @dev communeId => Member[]
     mapping(uint256 => Member[]) public communeMembers;
@@ -17,12 +23,79 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @dev 0 means not registered (since commune IDs start at 1)
     mapping(address => uint256) public memberCommuneId;
 
+    /// @notice Tracks which nonces have been used for each commune to prevent replay attacks
+    /// @dev communeId => nonce => used
+    mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
+
+    /// @notice Sets the CommuneRegistry reference
+    /// @param _communeRegistry Address of the CommuneRegistry contract
+    /// @dev Can only be called by CommuneOS, typically during initialization
+    function setCommuneRegistry(address _communeRegistry) external onlyCommuneOS {
+        communeRegistry = ICommuneRegistry(_communeRegistry);
+    }
+
+    /// @notice Validates an invite signature and returns commune info
+    /// @param communeId ID of the commune being joined
+    /// @param nonce Unique nonce for this invite (prevents replay attacks)
+    /// @param signature 65-byte ECDSA signature from the commune creator
+    /// @return commune The commune data if validation succeeds
+    /// @dev Checks that: nonce hasn't been used, and signature is from creator
+    function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature)
+        external
+        view
+        returns (Commune memory commune)
+    {
+        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
+
+        // Get commune details
+        commune = communeRegistry.getCommune(communeId);
+
+        // Create the message hash
+        bytes32 messageHash = getMessageHash(communeId, nonce);
+        bytes32 ethSignedMessageHash = getEthSignedMessageHash(messageHash);
+
+        // Recover the signer
+        address signer = recoverSigner(ethSignedMessageHash, signature);
+
+        // Verify the signer is the commune creator
+        if (signer != commune.creator) revert InvalidInvite();
+
+        return commune;
+    }
+
+    /// @notice Joins a commune with validated invite
+    /// @param communeId The commune ID
+    /// @param memberAddress Address of the member joining
+    /// @param nonce The invite nonce to mark as used
+    /// @param collateralAmount Amount of collateral deposited
+    /// @dev Called by CommuneOS after invite validation and collateral handling
+    function joinCommune(uint256 communeId, address memberAddress, uint256 nonce, uint256 collateralAmount)
+        external
+        onlyCommuneOS
+    {
+        // Mark nonce as used
+        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
+        usedNonces[communeId][nonce] = true;
+
+        // Register the member
+        _registerMember(communeId, memberAddress, collateralAmount);
+        emit MemberJoined(memberAddress, communeId, collateralAmount, block.timestamp);
+    }
+
     /// @notice Registers a new member to a commune
     /// @param communeId ID of the commune to join
     /// @param memberAddress Address of the new member
     /// @dev Third parameter (collateralAmount) is ignored but kept for interface compatibility
     /// @dev Reverts if address is zero or already registered to any commune
     function registerMember(uint256 communeId, address memberAddress, uint256) external onlyCommuneOS {
+        _registerMember(communeId, memberAddress, 0);
+    }
+
+    /// @notice Internal function to register a member
+    /// @param communeId ID of the commune to join
+    /// @param memberAddress Address of the new member
+    /// @param collateralAmount Amount of collateral deposited (for event logging)
+    function _registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) internal {
         if (memberAddress == address(0)) revert InvalidAddress();
         if (memberCommuneId[memberAddress] != 0) revert AlreadyRegistered();
 
@@ -31,7 +104,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
         communeMembers[communeId].push(newMember);
         memberCommuneId[memberAddress] = communeId;
 
-        emit MemberRegistered(memberAddress, communeId, 0, block.timestamp);
+        emit MemberRegistered(memberAddress, communeId, collateralAmount, block.timestamp);
     }
 
     /// @notice Checks if an address is a member of a specific commune
@@ -93,5 +166,58 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
             }
         }
         revert InvalidAddress();
+    }
+
+    /// @notice Checks whether a nonce has been used for a commune
+    /// @param communeId ID of the commune
+    /// @param nonce Nonce value to check
+    /// @return bool True if nonce has been used, false otherwise
+    function isNonceUsed(uint256 communeId, uint256 nonce) external view returns (bool) {
+        return usedNonces[communeId][nonce];
+    }
+
+    // Internal signature verification helpers
+
+    /// @notice Generates message hash from communeId and nonce
+    /// @param communeId ID of the commune
+    /// @param nonce Unique nonce value
+    /// @return bytes32 Keccak256 hash of the packed parameters
+    /// @dev Used as first step in EIP-191 signature verification
+    function getMessageHash(uint256 communeId, uint256 nonce) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(communeId, nonce));
+    }
+
+    /// @notice Converts message hash to Ethereum signed message hash (EIP-191)
+    /// @param messageHash Original message hash
+    /// @return bytes32 Hash prefixed with "\x19Ethereum Signed Message:\n32"
+    /// @dev This format matches what eth_sign produces
+    function getEthSignedMessageHash(bytes32 messageHash) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+    }
+
+    /// @notice Recovers the signer address from a signature
+    /// @param ethSignedMessageHash EIP-191 formatted message hash
+    /// @param signature 65-byte ECDSA signature
+    /// @return address Address that created the signature
+    /// @dev Uses ecrecover precompile
+    function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) internal pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
+        return ecrecover(ethSignedMessageHash, v, r, s);
+    }
+
+    /// @notice Splits a signature into its r, s, v components
+    /// @param sig 65-byte signature
+    /// @return r First 32 bytes of signature
+    /// @return s Second 32 bytes of signature
+    /// @return v Recovery id (last byte)
+    /// @dev Reverts if signature is not exactly 65 bytes
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "Invalid signature length");
+
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
     }
 }
