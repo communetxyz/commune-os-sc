@@ -1,0 +1,5 @@
+{
+  "network": "gnosis",
+  "chainId": 100,
+  "collateralToken": "0x0000000000000000000000000000000000000000"
+}
