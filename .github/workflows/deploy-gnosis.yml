@@ -125,3 +125,35 @@ jobs:
         with:
           name: gnosis-deployment
           path: deployments/gnosis/
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## 🚀 Gnosis Chain Deployment
+
+            **Network:** Gnosis Chain
+            **Chain ID:** 100
+
+            ### Deployed Contracts
+
+            | Contract | Address | Explorer |
+            | --- | --- | --- |
+            | CommuneOS | \`${{ steps.deploy.outputs.commune_os }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.commune_os }}) |
+            | CommuneRegistry | \`${{ steps.deploy.outputs.commune_registry }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.commune_registry }}) |
+            | MemberRegistry | \`${{ steps.deploy.outputs.member_registry }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.member_registry }}) |
+            | ChoreScheduler | \`${{ steps.deploy.outputs.chore_scheduler }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.chore_scheduler }}) |
+            | ExpenseManager | \`${{ steps.deploy.outputs.expense_manager }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.expense_manager }}) |
+            | VotingModule | \`${{ steps.deploy.outputs.voting_module }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.voting_module }}) |
+            | CollateralManager | \`${{ steps.deploy.outputs.collateral_manager }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.collateral_manager }}) |
+
+            **Deployment Time:** ${new Date().toISOString()}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
