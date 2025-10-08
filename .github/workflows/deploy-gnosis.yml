@@ -2,13 +2,15 @@ name: Deploy to Gnosis Chain
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   deploy-gnosis:
     name: Deploy to Gnosis Chain
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: read
       pull-requests: write

@@ -2,13 +2,15 @@ name: Deploy to Holesky Testnet
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   deploy-testnet:
     name: Deploy to Holesky
     runs-on: ubuntu-latest
+    environment: testnet
     permissions:
       contents: read
       pull-requests: write
