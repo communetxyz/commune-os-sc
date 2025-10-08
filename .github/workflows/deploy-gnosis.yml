@@ -74,53 +74,6 @@ jobs:
 
           echo "Deployed CommuneOS to: $COMMUNE_OS"
 
-      - name: Wait for blockchain indexing
-        run: sleep 60
-
-      - name: Verify contracts on Blockscout
-        env:
-          GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
-        run: |
-          # Get the exact compiler version metadata from the compiled artifact
-          COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
-
-          # Read collateral token from config
-          COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/gnosis.json)
-
-          echo "Verifying CollateralManager..."
-          forge verify-contract \
-            ${{ steps.deploy.outputs.collateral_manager }} \
-            src/CollateralManager.sol:CollateralManager \
-            --chain-id 100 \
-            --compiler-version "v${COMPILER_VERSION}" \
-            --num-of-optimizations 200 \
-            --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
-            --verifier blockscout \
-            --verifier-url https://gnosis.blockscout.com/api \
-            --watch || true
-
-          sleep 10
-
-          # Verify module contracts (no constructor args)
-          for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "ExpenseManager" "VotingModule"; do
-            echo "Verifying $contract..."
-
-            ADDRESS_VAR=$(echo $contract | awk '{print tolower($0)}' | sed 's/registry/_registry/g' | sed 's/manager/_manager/g' | sed 's/scheduler/_scheduler/g' | sed 's/module/_module/g')
-            ADDRESS=$(eval echo \${{ steps.deploy.outputs.$ADDRESS_VAR }})
-
-            forge verify-contract \
-              $ADDRESS \
-              src/$contract.sol:$contract \
-              --chain-id 100 \
-              --compiler-version "v${COMPILER_VERSION}" \
-              --num-of-optimizations 200 \
-              --verifier blockscout \
-              --verifier-url https://gnosis.blockscout.com/api \
-              --watch || true
-
-            sleep 10
-          done
-
       - name: Create deployment summary
         run: |
           echo "## 🚀 Gnosis Chain Mainnet Deployment" >> $GITHUB_STEP_SUMMARY
@@ -139,15 +92,6 @@ jobs:
           echo "| ExpenseManager | \`${{ steps.deploy.outputs.expense_manager }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.expense_manager }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| VotingModule | \`${{ steps.deploy.outputs.voting_module }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.voting_module }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| CollateralManager | \`${{ steps.deploy.outputs.collateral_manager }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.collateral_manager }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Contract Interface" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Main Functions:**" >> $GITHUB_STEP_SUMMARY
-          echo "- \`createCommune()\` - Create a new commune" >> $GITHUB_STEP_SUMMARY
-          echo "- \`joinCommune()\` - Join an existing commune with invite" >> $GITHUB_STEP_SUMMARY
-          echo "- \`createExpense()\` - Create a new expense" >> $GITHUB_STEP_SUMMARY
-          echo "- \`voteOnDispute()\` - Vote on expense disputes" >> $GITHUB_STEP_SUMMARY
-          echo "- \`markChoreComplete()\` - Mark a chore as complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Deployment Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
 
@@ -182,104 +126,12 @@ jobs:
           name: gnosis-deployment
           path: deployments/gnosis/
 
-      - name: Create deployment notes
-        id: deployment_notes
-        run: |
-          cat > deployment-notes.md << 'EOF'
-          # CommuneOS Deployment - Gnosis Chain
-
-          ## Contract Details
-
-          - **Network:** Gnosis Chain (Mainnet)
-          - **Chain ID:** 100
-          - **CommuneOS Address:** `${{ steps.deploy.outputs.commune_os }}`
-          - **Explorer:** [View on Blockscout](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.commune_os }})
-          - **Deployment Time:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
-          - **Git Commit:** ${{ github.sha }}
-
-          ## Module Contracts
-
-          | Module | Address | Explorer |
-          | --- | --- | --- |
-          | CommuneRegistry | `${{ steps.deploy.outputs.commune_registry }}` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.commune_registry }}) |
-          | MemberRegistry | `${{ steps.deploy.outputs.member_registry }}` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.member_registry }}) |
-          | ChoreScheduler | `${{ steps.deploy.outputs.chore_scheduler }}` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.chore_scheduler }}) |
-          | ExpenseManager | `${{ steps.deploy.outputs.expense_manager }}` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.expense_manager }}) |
-          | VotingModule | `${{ steps.deploy.outputs.voting_module }}` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.voting_module }}) |
-          | CollateralManager | `${{ steps.deploy.outputs.collateral_manager }}` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.collateral_manager }}) |
-
-          ## Usage Examples
-
-          ### Create a Commune
-
-          \`\`\`bash
-          cast send ${{ steps.deploy.outputs.commune_os }} \\
-            "createCommune(string,bool,uint256,(uint256,string,uint256,uint256)[])" \\
-            "My Commune" \\
-            true \\
-            1000000000000000000 \\
-            "[]" \\
-            --rpc-url https://rpc.gnosischain.com \\
-            --private-key $PRIVATE_KEY
-          \`\`\`
-
-          ### Join a Commune
-
-          \`\`\`bash
-          cast send ${{ steps.deploy.outputs.commune_os }} \\
-            "joinCommune(uint256,uint256,bytes)" \\
-            1 \\
-            <NONCE> \\
-            <SIGNATURE> \\
-            --rpc-url https://rpc.gnosischain.com \\
-            --private-key $PRIVATE_KEY
-          \`\`\`
-
-          ### Create an Expense
-
-          \`\`\`bash
-          cast send ${{ steps.deploy.outputs.commune_os }} \\
-            "createExpense(uint256,uint256,string,uint256,address)" \\
-            1 \\
-            1000000000000000000 \\
-            "Utilities bill" \\
-            1735689600 \\
-            <ASSIGNEE_ADDRESS> \\
-            --rpc-url https://rpc.gnosischain.com \\
-            --private-key $PRIVATE_KEY
-          \`\`\`
-
-          ## Features
-
-          - ✅ Invite-based commune creation with EIP-191 signatures
-          - ✅ Optional collateral requirements (ETH or ERC20)
-          - ✅ Rotating chore assignments with period-based tracking
-          - ✅ Expense management with dispute resolution
-          - ✅ Automatic 2/3 majority voting resolution
-          - ✅ Gas-optimized for Gnosis Chain
-          - ✅ Fully verified contracts on Blockscout
-
-          ## Security
-
-          - **Modular Architecture:** Separated concerns with dedicated module contracts
-          - **Access Control:** CommuneOSModule base contract ensures only main contract can call modules
-          - **Custom Errors:** Gas-efficient error handling throughout
-          - **Immutable Deployments:** Module addresses set at construction time
-          - **Verified Contracts:** All source code verified on Blockscout
-          EOF
-
-          cat deployment-notes.md
-
-      - name: Comment on PR (if applicable)
+      - name: Comment on PR
         if: github.event_name == 'pull_request'
-        continue-on-error: true
         uses: actions/github-script@v7
         with:
           script: |
-            const communeOS = '${{ steps.deploy.outputs.commune_os }}';
-            const explorerUrl = `https://gnosis.blockscout.com/address/${communeOS}`;
-
-            const comment = `## 🚀 Gnosis Chain Mainnet Deployment
+            const comment = `## 🚀 Gnosis Chain Deployment
 
             **Network:** Gnosis Chain
             **Chain ID:** 100
@@ -288,7 +140,7 @@ jobs:
 
             | Contract | Address | Explorer |
             | --- | --- | --- |
-            | CommuneOS | \`${communeOS}\` | [View](${explorerUrl}) |
+            | CommuneOS | \`${{ steps.deploy.outputs.commune_os }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.commune_os }}) |
             | CommuneRegistry | \`${{ steps.deploy.outputs.commune_registry }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.commune_registry }}) |
             | MemberRegistry | \`${{ steps.deploy.outputs.member_registry }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.member_registry }}) |
             | ChoreScheduler | \`${{ steps.deploy.outputs.chore_scheduler }}\` | [View](https://gnosis.blockscout.com/address/${{ steps.deploy.outputs.chore_scheduler }}) |
