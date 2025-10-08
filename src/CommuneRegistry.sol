@@ -14,7 +14,7 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     // CommuneId => nonce => used status
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
 
-    uint256 public communeCount;
+    uint256 public communeCount = 1; // Start at 1 so 0 can be used as "not a member"
 
     /// @notice Create a new commune
     /// @param name The commune name

@@ -14,7 +14,6 @@ struct Commune {
 
 struct Member {
     address walletAddress;
-    uint256 joinDate;
     uint256 communeId;
     bool active;
 }

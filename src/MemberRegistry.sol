@@ -11,10 +11,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     // CommuneId => array of Members
     mapping(uint256 => Member[]) public communeMembers;
 
-    // Member address => is registered
-    mapping(address => bool) public isRegistered;
-
-    // Member address => commune ID
+    // Member address => commune ID (0 means not registered)
     mapping(address => uint256) public memberCommuneId;
 
     /// @notice Register a new member to a commune
@@ -22,13 +19,11 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @param memberAddress The member's address
     function registerMember(uint256 communeId, address memberAddress, uint256) external onlyCommuneOS {
         if (memberAddress == address(0)) revert InvalidAddress();
-        if (isRegistered[memberAddress]) revert AlreadyRegistered();
+        if (memberCommuneId[memberAddress] != 0) revert AlreadyRegistered();
 
-        Member memory newMember =
-            Member({walletAddress: memberAddress, joinDate: block.timestamp, communeId: communeId, active: true});
+        Member memory newMember = Member({walletAddress: memberAddress, communeId: communeId, active: true});
 
         communeMembers[communeId].push(newMember);
-        isRegistered[memberAddress] = true;
         memberCommuneId[memberAddress] = communeId;
 
         emit MemberRegistered(memberAddress, communeId, 0, block.timestamp);
@@ -39,7 +34,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @param memberAddress The member's address
     /// @return bool True if member belongs to commune
     function isMember(uint256 communeId, address memberAddress) external view returns (bool) {
-        return isRegistered[memberAddress] && memberCommuneId[memberAddress] == communeId;
+        return memberCommuneId[memberAddress] == communeId && communeId != 0;
     }
 
     /// @notice Check if multiple addresses are members of a commune
@@ -49,7 +44,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     function areMembers(uint256 communeId, address[] memory addresses) external view returns (bool[] memory results) {
         results = new bool[](addresses.length);
         for (uint256 i = 0; i < addresses.length; i++) {
-            results[i] = isRegistered[addresses[i]] && memberCommuneId[addresses[i]] == communeId;
+            results[i] = memberCommuneId[addresses[i]] == communeId && communeId != 0;
         }
         return results;
     }
@@ -77,9 +72,9 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @param memberAddress The member's address
     /// @return Member The member data
     function getMemberStatus(address memberAddress) external view returns (Member memory) {
-        if (!isRegistered[memberAddress]) revert InvalidAddress();
-
         uint256 communeId = memberCommuneId[memberAddress];
+        if (communeId == 0) revert InvalidAddress();
+
         Member[] memory members = communeMembers[communeId];
         for (uint256 i = 0; i < members.length; i++) {
             if (members[i].walletAddress == memberAddress) {

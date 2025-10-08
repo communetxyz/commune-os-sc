@@ -51,7 +51,7 @@ contract CommuneOSTest is Test {
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
 
-        assertEq(communeId, 0);
+        assertEq(communeId, 1); // Commune IDs start at 1
 
         (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount) =
             communeOS.getCommuneStatistics(communeId);
