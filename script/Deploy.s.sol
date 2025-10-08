@@ -7,7 +7,11 @@ import "../src/CommuneOS.sol";
 contract DeployScript is Script {
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address collateralToken = vm.envAddress("COLLATERAL_TOKEN");
+        string memory configPath = vm.envString("CONFIG_PATH");
+
+        // Read and parse config file
+        string memory json = vm.readFile(configPath);
+        address collateralToken = vm.parseJsonAddress(json, ".collateralToken");
 
         vm.startBroadcast(deployerPrivateKey);
 

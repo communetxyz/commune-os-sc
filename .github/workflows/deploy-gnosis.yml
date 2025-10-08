@@ -1,6 +1,9 @@
 name: Deploy to Gnosis Chain
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - main
@@ -42,7 +45,7 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.GNOSIS_PRIVATE_KEY }}
           GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
-          COLLATERAL_TOKEN: ${{ secrets.GNOSIS_COLLATERAL_TOKEN }}
+          CONFIG_PATH: config/gnosis.json
         run: |
           DEPLOY_OUTPUT=$(forge script script/Deploy.s.sol:DeployScript \
             --rpc-url $GNOSIS_RPC_URL \
@@ -77,10 +80,12 @@ jobs:
       - name: Verify contracts on Blockscout
         env:
           GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
-          COLLATERAL_TOKEN: ${{ secrets.GNOSIS_COLLATERAL_TOKEN }}
         run: |
           # Get the exact compiler version metadata from the compiled artifact
           COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
+
+          # Read collateral token from config
+          COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/gnosis.json)
 
           echo "Verifying CollateralManager..."
           forge verify-contract \
