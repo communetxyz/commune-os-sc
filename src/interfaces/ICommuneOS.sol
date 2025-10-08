@@ -14,7 +14,6 @@ interface ICommuneOS {
     error InsufficientCollateral();
     error NotAMember();
     error AssigneeNotAMember();
-    error NewAssigneeNotAMember();
 
     // Functions
     function createCommune(
@@ -22,9 +21,9 @@ interface ICommuneOS {
         bool collateralRequired,
         uint256 collateralAmount,
         ChoreSchedule[] memory choreSchedules
-    ) external payable returns (uint256 communeId);
+    ) external returns (uint256 communeId);
 
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable;
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external;
 
     function markChoreComplete(uint256 communeId, uint256 choreId) external;
 
@@ -48,15 +47,4 @@ interface ICommuneOS {
         external
         view
         returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount);
-
-    function getCurrentChores(uint256 communeId)
-        external
-        view
-        returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed);
-
-    function getCommuneMembers(uint256 communeId) external view returns (address[] memory);
-
-    function getCommuneExpenses(uint256 communeId) external view returns (Expense[] memory);
-
-    function getCollateralBalance(address member) external view returns (uint256);
 }
