@@ -38,6 +38,18 @@ contract CommuneOS is ICommuneOS {
         _;
     }
 
+    /// @notice Modifier to check if both caller and another address are members
+    /// @param communeId The commune ID to check membership for
+    /// @param otherAddress The other address to check
+    modifier onlyMembers(uint256 communeId, address otherAddress) {
+        address[] memory addresses = new address[](2);
+        addresses[0] = msg.sender;
+        addresses[1] = otherAddress;
+        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
+        if (!results[0] || !results[1]) revert NotAMember();
+        _;
+    }
+
     /// @notice Initializes CommuneOS with all module contracts
     /// @param collateralToken Address of ERC20 token for collateral
     /// @dev Creates all module contracts in constructor for atomic deployment
@@ -136,16 +148,7 @@ contract CommuneOS is ICommuneOS {
         string memory description,
         uint256 dueDate,
         address assignedTo
-    ) external returns (uint256 expenseId) {
-        // Verify both creator and assignee are members
-        address[] memory addresses = new address[](2);
-        addresses[0] = msg.sender;
-        addresses[1] = assignedTo;
-        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
-
-        if (!results[0] || !results[1]) revert NotAMember();
-
-        // Create expense
+    ) external onlyMembers(communeId, assignedTo) returns (uint256 expenseId) {
         return expenseManager.createExpense(communeId, amount, description, dueDate, assignedTo);
     }
 
@@ -165,17 +168,9 @@ contract CommuneOS is ICommuneOS {
     /// @dev Both caller and new assignee must be members of the commune
     function disputeExpense(uint256 communeId, uint256 expenseId, address newAssignee)
         external
+        onlyMembers(communeId, newAssignee)
         returns (uint256 disputeId)
     {
-        // Verify both disputer and new assignee are members
-        address[] memory addresses = new address[](2);
-        addresses[0] = msg.sender;
-        addresses[1] = newAssignee;
-        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
-
-        if (!results[0]) revert NotAMember();
-        if (!results[1]) revert NotAMember();
-
         // Create dispute
         disputeId = votingModule.createDispute(expenseId, newAssignee);
 
