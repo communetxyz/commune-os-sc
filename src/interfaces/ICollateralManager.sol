@@ -10,7 +10,6 @@ interface ICollateralManager {
 
     // Errors
     error InvalidDepositAmount();
-    error TransferFailed();
 
     // Functions
     function depositCollateral(address member, uint256 amount) external;

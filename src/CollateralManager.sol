@@ -3,16 +3,15 @@ pragma solidity ^0.8.19;
 
 import "./interfaces/ICollateralManager.sol";
 import "./CommuneOSModule.sol";
-
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-}
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
 /// @dev Supports ERC20 tokens for collateral
 contract CollateralManager is CommuneOSModule, ICollateralManager {
+    using SafeERC20 for IERC20;
+
     /// @notice The ERC20 token contract used for collateral
     IERC20 public immutable collateralToken;
 
@@ -30,13 +29,12 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @notice Deposit collateral for a member
     /// @param member The member address
     /// @param amount The amount to deposit
-    /// @dev Uses transferFrom to pull ERC20 tokens from member
+    /// @dev Uses safeTransferFrom to pull ERC20 tokens from member
     function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
         if (amount == 0) revert InvalidDepositAmount();
 
-        // ERC20 token transfer
-        bool success = collateralToken.transferFrom(member, address(this), amount);
-        if (!success) revert TransferFailed();
+        // ERC20 token transfer using SafeERC20
+        collateralToken.safeTransferFrom(member, address(this), amount);
 
         collateralBalance[member] += amount;
         emit CollateralDeposited(member, amount);
@@ -46,13 +44,12 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
-    /// @dev Uses token.transfer to send ERC20 tokens to recipient
+    /// @dev Uses safeTransfer to send ERC20 tokens to recipient
     function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
         collateralBalance[member] -= amount; // Will revert if insufficient balance
 
-        // ERC20 token transfer
-        bool success = collateralToken.transfer(recipient, amount);
-        if (!success) revert TransferFailed();
+        // ERC20 token transfer using SafeERC20
+        collateralToken.safeTransfer(recipient, amount);
 
         emit CollateralSlashed(member, amount, recipient);
     }
