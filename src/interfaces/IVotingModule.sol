@@ -21,8 +21,6 @@ struct Dispute {
     uint256 votesAgainst;
     /// @notice Current status of the dispute
     DisputeStatus status;
-    /// @notice Unix timestamp when the dispute was created
-    uint256 createdAt;
 }
 
 /// @title IVotingModule
