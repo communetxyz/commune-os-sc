@@ -9,7 +9,6 @@ import "./CommuneViewer.sol";
 /// @notice Main contract integrating all commune management modules
 /// @dev Deployed on Gnosis Chain for low gas fees. Coordinates all module interactions.
 contract CommuneOS is CommuneViewer, ICommuneOS {
-
     /// @notice Modifier to check if caller is a member of the commune
     /// @param communeId The commune ID to check membership for
     modifier onlyMember(uint256 communeId) {

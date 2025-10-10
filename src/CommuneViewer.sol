@@ -132,7 +132,8 @@ abstract contract CommuneViewer {
         (completedChores, pendingChores) = _getMonthChoreInstances(communeId, members, monthStart, monthEnd);
 
         // Get and categorize expenses for specified month
-        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) = _getMonthExpenses(communeId, monthStart, monthEnd);
+        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) =
+            _getMonthExpenses(communeId, monthStart, monthEnd);
 
         return (
             communeData,
@@ -295,11 +296,7 @@ abstract contract CommuneViewer {
     /// @param disputeId The dispute ID
     /// @param communeId The commune ID to get member list
     /// @return voters Array of addresses that have voted on the dispute
-    function getDisputeVoters(uint256 disputeId, uint256 communeId)
-        external
-        view
-        returns (address[] memory voters)
-    {
+    function getDisputeVoters(uint256 disputeId, uint256 communeId) external view returns (address[] memory voters) {
         address[] memory members = memberRegistry.getCommuneMembers(communeId);
 
         // Count voters
