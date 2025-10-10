@@ -242,10 +242,7 @@ contract InviteGeneratorTest is Test {
             assertEq(signatures[i].length, 65, "Each signature should be 65 bytes");
             // Verify each signature is different
             if (i > 0) {
-                assertTrue(
-                    keccak256(signatures[i]) != keccak256(signatures[i-1]),
-                    "Signatures should be unique"
-                );
+                assertTrue(keccak256(signatures[i]) != keccak256(signatures[i - 1]), "Signatures should be unique");
             }
         }
     }
@@ -260,9 +257,7 @@ contract InviteGeneratorTest is Test {
 
         // Manually verify the hash format matches
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
 
         // Recover signer from our signature
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);

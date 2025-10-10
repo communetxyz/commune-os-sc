@@ -22,9 +22,7 @@ contract InviteGenerator is Script {
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
 
         // Convert to Ethereum signed message hash (EIP-191)
-        bytes32 ethSignedMessageHash = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash)
-        );
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
 
         // Sign the message
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, ethSignedMessageHash);
