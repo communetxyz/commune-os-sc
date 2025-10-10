@@ -1,18 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./interfaces/ICollateralManager.sol";
 import "./CommuneOSModule.sol";
-
-interface IERC20 {
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
-    function transfer(address to, uint256 amount) external returns (bool);
-}
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
 /// @dev Only supports ERC20 tokens for collateral
 contract CollateralManager is CommuneOSModule, ICollateralManager {
+    using SafeERC20 for IERC20;
+
     /// @notice The ERC20 token contract used for collateral
     IERC20 public immutable collateralToken;
 
@@ -34,13 +33,12 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @notice Deposit collateral for a member
     /// @param member The member address
     /// @param amount The amount to deposit
-    /// @dev Uses ERC20 transferFrom
+    /// @dev Uses SafeERC20 for secure token transfers
     function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
         if (amount == 0) revert InvalidDepositAmount();
 
-        // ERC20 token transfer
-        bool success = collateralToken.transferFrom(member, address(this), amount);
-        if (!success) revert TransferFailed();
+        // SafeERC20 transfer - automatically reverts on failure
+        collateralToken.safeTransferFrom(member, address(this), amount);
 
         collateralBalance[member] += amount;
         emit CollateralDeposited(member, amount);
@@ -50,7 +48,7 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
-    /// @dev Uses checks-effects-interactions pattern to prevent reentrancy
+    /// @dev Uses checks-effects-interactions pattern with SafeERC20 to prevent reentrancy
     function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
         // Checks
         if (collateralBalance[member] < amount) revert InsufficientCollateral();
@@ -58,9 +56,8 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
         // Effects
         collateralBalance[member] -= amount;
 
-        // Interactions
-        bool success = collateralToken.transfer(recipient, amount);
-        if (!success) revert TransferFailed();
+        // Interactions - SafeERC20 automatically reverts on failure
+        collateralToken.safeTransfer(recipient, amount);
 
         emit CollateralSlashed(member, amount, recipient);
     }

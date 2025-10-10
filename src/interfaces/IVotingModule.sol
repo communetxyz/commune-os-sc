@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @notice Represents a dispute over an expense assignment
 /// @dev Disputes auto-resolve when 2/3 majority is reached

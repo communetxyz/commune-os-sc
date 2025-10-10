@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @title ICollateralManager
 /// @notice Interface for managing collateral deposits and slashing (no withdrawals)
@@ -10,7 +10,6 @@ interface ICollateralManager {
 
     // Errors
     error InvalidDepositAmount();
-    error TransferFailed();
 
     // Functions
     function depositCollateral(address member, uint256 amount) external;

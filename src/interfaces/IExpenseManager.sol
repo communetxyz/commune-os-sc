@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @notice Represents a financial expense within a commune
 /// @dev Expenses can be assigned, paid, and disputed
