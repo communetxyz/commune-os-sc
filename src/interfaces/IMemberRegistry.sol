@@ -24,6 +24,7 @@ interface IMemberRegistry {
     error AlreadyRegistered();
     error InvalidInvite();
     error NonceAlreadyUsed();
+    error InvalidSignatureLength();
 
     // Functions
     function validateInvite(uint256 communeId, address creatorAddress, uint256 nonce, bytes memory signature)

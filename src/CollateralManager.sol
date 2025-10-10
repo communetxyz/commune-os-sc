@@ -22,7 +22,7 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @notice Initializes the CollateralManager with token configuration
     /// @param _collateralToken Address of ERC20 token
     constructor(address _collateralToken) {
-        require(_collateralToken != address(0), "Invalid token address");
+        if (_collateralToken == address(0)) revert InvalidTokenAddress();
         collateralToken = IERC20(_collateralToken);
     }
 

@@ -132,7 +132,7 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @return v Recovery id (last byte)
     /// @dev Reverts if signature is not exactly 65 bytes
     function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
-        require(sig.length == 65, "Invalid signature length");
+        if (sig.length != 65) revert InvalidSignatureLength();
 
         assembly {
             r := mload(add(sig, 32))
