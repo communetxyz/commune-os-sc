@@ -80,22 +80,6 @@ contract ExpenseManager is CommuneOSModule, IExpenseManager {
         emit ExpenseDisputed(expenseId, disputeId);
     }
 
-    /// @notice Reassign an expense to a new member (after dispute resolution)
-    /// @param expenseId The expense ID
-    /// @param newAssignee The new assignee
-    /// @dev Resets the paid status to false when reassigning
-    function reassignExpense(uint256 expenseId, address newAssignee) external onlyCommuneOS {
-        if (expenseId >= expenseCount) revert InvalidExpenseId();
-        if (newAssignee == address(0)) revert InvalidAssignee();
-
-        address oldAssignee = expenses[expenseId].assignedTo;
-
-        expenses[expenseId].assignedTo = newAssignee;
-        expenses[expenseId].paid = false; // Reset paid status
-
-        emit ExpenseReassigned(expenseId, oldAssignee, newAssignee);
-    }
-
     /// @notice Check if an expense is paid
     /// @param expenseId The expense ID
     /// @return bool True if paid

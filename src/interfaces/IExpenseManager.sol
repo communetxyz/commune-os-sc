@@ -36,7 +36,6 @@ interface IExpenseManager {
     );
     event ExpensePaid(uint256 indexed expenseId, address indexed paidBy);
     event ExpenseDisputed(uint256 indexed expenseId, uint256 indexed disputeId);
-    event ExpenseReassigned(uint256 indexed expenseId, address indexed oldAssignee, address indexed newAssignee);
 
     // Errors
     error InvalidAssignee();
@@ -58,8 +57,6 @@ interface IExpenseManager {
     function markExpensePaid(uint256 expenseId) external;
 
     function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external;
-
-    function reassignExpense(uint256 expenseId, address newAssignee) external;
 
     function isExpensePaid(uint256 expenseId) external view returns (bool);
 

@@ -218,8 +218,14 @@ contract CommuneOS is ICommuneOS {
                 collateralManager.slashCollateral(oldAssignee, slashAmount, newAssignee);
             }
 
-            // Reassign expense to new assignee
-            expenseManager.reassignExpense(dispute.expenseId, newAssignee);
+            // Create a new expense as a copy for the new assignee
+            expenseManager.createExpense(
+                expense.communeId,
+                expense.amount,
+                expense.description,
+                expense.dueDate,
+                newAssignee
+            );
         }
     }
 
