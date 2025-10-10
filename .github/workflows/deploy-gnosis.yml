@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+      - security-review  # Temporary: test deployment on PR
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
