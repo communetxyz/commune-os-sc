@@ -22,9 +22,9 @@ interface ICommuneOS {
         bool collateralRequired,
         uint256 collateralAmount,
         ChoreSchedule[] memory choreSchedules
-    ) external payable returns (uint256 communeId);
+    ) external returns (uint256 communeId);
 
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable;
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external;
 
     function markChoreComplete(uint256 communeId, uint256 choreId) external;
 

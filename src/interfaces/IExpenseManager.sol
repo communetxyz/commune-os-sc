@@ -44,6 +44,7 @@ interface IExpenseManager {
     error EmptyDescription();
     error InvalidExpenseId();
     error AlreadyPaid();
+    error AlreadyDisputed();
 
     // Functions
     function createExpense(

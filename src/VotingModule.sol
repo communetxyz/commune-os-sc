@@ -9,6 +9,9 @@ import "./CommuneOSModule.sol";
 /// @notice Manages voting on expense disputes with automatic 2/3 majority resolution
 /// @dev Disputes auto-resolve when either votesFor or votesAgainst reaches 2/3 of total members
 contract VotingModule is CommuneOSModule, IVotingModule {
+    /// @notice Minimum time that must pass before a dispute can be resolved
+    uint256 public constant MIN_VOTING_PERIOD = 1 days;
+
     /// @notice Stores dispute data by dispute ID
     /// @dev Maps dispute ID => Dispute struct containing all dispute information
     mapping(uint256 => Dispute) public disputes;
@@ -23,6 +26,9 @@ contract VotingModule is CommuneOSModule, IVotingModule {
 
     /// @notice Total number of disputes created (also serves as next dispute ID)
     uint256 public disputeCount;
+
+    /// @notice Thrown when trying to resolve dispute before minimum voting period
+    error VotingPeriodNotEnded();
 
     /// @notice Create a new dispute for an expense
     /// @param expenseId The expense being disputed
@@ -77,6 +83,11 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         }
 
         emit VoteCast(disputeId, voter, support);
+
+        // Check if minimum voting period has passed
+        if (block.timestamp < dispute.createdAt + MIN_VOTING_PERIOD) {
+            return; // Cannot resolve yet, voting period not ended
+        }
 
         // Check if 2/3 majority has been reached (either for or against)
         uint256 requiredVotes = (totalMembers * 2) / 3;

@@ -11,42 +11,36 @@ interface IERC20 {
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
-/// @dev Supports both native ETH and ERC20 tokens for collateral
+/// @dev Only supports ERC20 tokens for collateral
 contract CollateralManager is CommuneOSModule, ICollateralManager {
-    /// @notice The ERC20 token contract used for collateral (if applicable)
-    /// @dev Set to address(0) when using native ETH
+    /// @notice The ERC20 token contract used for collateral
     IERC20 public immutable collateralToken;
 
-    /// @notice Whether this contract uses ERC20 tokens (true) or native ETH (false)
-    bool public immutable useERC20;
-
     /// @notice Tracks collateral balance for each member
-    /// @dev Maps member address => collateral balance in wei or token units
+    /// @dev Maps member address => collateral balance in token units
     mapping(address => uint256) public collateralBalance;
 
+    /// @notice Thrown when member has insufficient collateral
+    error InsufficientCollateral();
+
     /// @notice Initializes the CollateralManager with token configuration
-    /// @param _collateralToken Address of ERC20 token (address(0) for native ETH)
-    /// @dev Sets useERC20 flag based on whether token address is provided
+    /// @param _collateralToken Address of ERC20 token for collateral
+    /// @dev Reverts if token address is zero
     constructor(address _collateralToken) {
-        useERC20 = _collateralToken != address(0);
-        collateralToken = IERC20(_collateralToken); // Safe to set even if address(0)
+        if (_collateralToken == address(0)) revert InvalidDepositAmount();
+        collateralToken = IERC20(_collateralToken);
     }
 
     /// @notice Deposit collateral for a member
     /// @param member The member address
     /// @param amount The amount to deposit
-    /// @dev For ERC20: uses transferFrom. For ETH: expects msg.value
-    function depositCollateral(address member, uint256 amount) external payable onlyCommuneOS {
+    /// @dev Uses ERC20 transferFrom
+    function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
         if (amount == 0) revert InvalidDepositAmount();
 
-        if (useERC20) {
-            // ERC20 token transfer
-            bool success = collateralToken.transferFrom(member, address(this), amount);
-            if (!success) revert TransferFailed();
-        } else {
-            // Native ETH transfer
-            if (msg.value != amount) revert InvalidDepositAmount();
-        }
+        // ERC20 token transfer
+        bool success = collateralToken.transferFrom(member, address(this), amount);
+        if (!success) revert TransferFailed();
 
         collateralBalance[member] += amount;
         emit CollateralDeposited(member, amount);
@@ -56,19 +50,17 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
-    /// @dev For ERC20: uses token.transfer. For ETH: uses call
+    /// @dev Uses checks-effects-interactions pattern to prevent reentrancy
     function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
-        collateralBalance[member] -= amount; // Will revert if insufficient balance
+        // Checks
+        if (collateralBalance[member] < amount) revert InsufficientCollateral();
 
-        if (useERC20) {
-            // ERC20 token transfer
-            bool success = collateralToken.transfer(recipient, amount);
-            if (!success) revert TransferFailed();
-        } else {
-            // Native ETH transfer
-            (bool success,) = recipient.call{value: amount}("");
-            if (!success) revert TransferFailed();
-        }
+        // Effects
+        collateralBalance[member] -= amount;
+
+        // Interactions
+        bool success = collateralToken.transfer(recipient, amount);
+        if (!success) revert TransferFailed();
 
         emit CollateralSlashed(member, amount, recipient);
     }

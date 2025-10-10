@@ -224,21 +224,24 @@ contract CommuneOSTest is Test {
         vm.prank(creator);
         communeOS.voteOnDispute(communeId, disputeId, true);
 
-        // Check dispute is not yet resolved after 1 vote
+        // Check dispute is not yet resolved after 1 vote (before minimum period)
         Dispute memory disputeAfterVote1 = communeOS.votingModule().getDispute(disputeId);
         assertEq(disputeAfterVote1.votesFor, 1);
         assertFalse(disputeAfterVote1.resolved);
 
+        // Warp time forward past minimum voting period (1 day)
+        vm.warp(block.timestamp + 1 days + 1);
+
         vm.prank(member2);
         communeOS.voteOnDispute(communeId, disputeId, true);
 
-        // After 2nd vote, 2/3 majority is reached and dispute auto-resolves
+        // After 2nd vote and minimum period passed, 2/3 majority is reached and dispute auto-resolves
         Dispute memory dispute = communeOS.votingModule().getDispute(disputeId);
         assertEq(dispute.expenseId, expenseId);
         assertEq(dispute.proposedNewAssignee, member3);
         assertEq(dispute.votesFor, 2); // creator and member2 voted for
         assertEq(dispute.votesAgainst, 0);
-        assertTrue(dispute.resolved); // Auto-resolved when 2/3 majority reached
+        assertTrue(dispute.resolved); // Auto-resolved when 2/3 majority reached and min period passed
         assertTrue(dispute.upheld); // Dispute was upheld
 
         // Verify expense is marked as disputed

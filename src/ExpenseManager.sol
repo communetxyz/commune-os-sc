@@ -69,8 +69,10 @@ contract ExpenseManager is CommuneOSModule, IExpenseManager {
     /// @notice Mark an expense as disputed
     /// @param expenseId The expense ID
     /// @param disputeId The dispute ID from VotingModule
+    /// @dev Reverts if expense has already been disputed (one dispute per expense)
     function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external onlyCommuneOS {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
+        if (expenses[expenseId].disputed) revert AlreadyDisputed();
 
         expenses[expenseId].disputed = true;
         expenseDisputes[expenseId] = disputeId;
