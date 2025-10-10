@@ -25,7 +25,7 @@ contract CommuneOSTest is Test {
     address public member2;
     address public member3;
 
-    uint256 public constant COLLATERAL_AMOUNT = 1 ether;
+    uint256 public constant COLLATERAL_AMOUNT = 3; // Small amount for testnet
 
     function setUp() public {
         token = new MockERC20();
@@ -36,11 +36,11 @@ contract CommuneOSTest is Test {
         member2 = vm.addr(member2PrivateKey);
         member3 = vm.addr(member3PrivateKey);
 
-        // Mint tokens for testing
-        token.mint(creator, 100 ether);
-        token.mint(member1, 100 ether);
-        token.mint(member2, 100 ether);
-        token.mint(member3, 100 ether);
+        // Mint tokens for testing (small amounts)
+        token.mint(creator, 1000);
+        token.mint(member1, 1000);
+        token.mint(member2, 1000);
+        token.mint(member3, 1000);
     }
 
     function testCreateCommune() public {
@@ -291,8 +291,8 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(member1);
 
-        // Try to join with insufficient collateral (only approve half)
-        token.approve(address(communeOS.collateralManager()), 0.5 ether);
+        // Try to join with insufficient collateral (only approve 1, need 3)
+        token.approve(address(communeOS.collateralManager()), 1);
         vm.expectRevert(); // Will revert on transferFrom due to insufficient approval
         communeOS.joinCommune(communeId, nonce, signature);
 

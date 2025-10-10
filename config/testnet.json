@@ -1,5 +1,5 @@
 {
   "network": "holesky",
   "chainId": 17000,
-  "collateralToken": "0x0000000000000000000000000000000000000000"
+  "collateralToken": "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034"
 }
