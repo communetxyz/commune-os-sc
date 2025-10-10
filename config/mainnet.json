@@ -1,0 +1,28 @@
+{
+  "network": "mainnet",
+  "chainId": 1,
+  "collateralToken": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+  "requiredCollateral": "1000000000000000000",
+  "chores": [
+    {
+      "title": "washing the dishes",
+      "frequency": 86400,
+      "description": "Daily chore"
+    },
+    {
+      "title": "tidying up the shower room and laundry area",
+      "frequency": 86400,
+      "description": "Daily chore"
+    },
+    {
+      "title": "cleaning the upstairs food area",
+      "frequency": 86400,
+      "description": "Daily chore"
+    },
+    {
+      "title": "cleaning the tables and floor after dinner",
+      "frequency": 86400,
+      "description": "Daily chore"
+    }
+  ]
+}
