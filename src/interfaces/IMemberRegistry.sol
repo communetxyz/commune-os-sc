@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @notice Represents a member of a commune
 /// @dev Members are stored in arrays per commune for efficient iteration
