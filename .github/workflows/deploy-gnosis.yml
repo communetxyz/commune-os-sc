@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev  # Temporary: for testing verification
   push:
     branches:
       - main
