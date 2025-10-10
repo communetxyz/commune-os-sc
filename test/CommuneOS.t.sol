@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/CommuneOS.sol";
@@ -8,7 +8,7 @@ import {Commune} from "../src/interfaces/ICommuneRegistry.sol";
 import {Member} from "../src/interfaces/IMemberRegistry.sol";
 import {ChoreSchedule} from "../src/interfaces/IChoreScheduler.sol";
 import {Expense} from "../src/interfaces/IExpenseManager.sol";
-import {Dispute} from "../src/interfaces/IVotingModule.sol";
+import {Dispute, DisputeStatus} from "../src/interfaces/IVotingModule.sol";
 import "./MockERC20.sol";
 
 contract CommuneOSTest is Test {
@@ -25,7 +25,7 @@ contract CommuneOSTest is Test {
     address public member2;
     address public member3;
 
-    uint256 public constant COLLATERAL_AMOUNT = 1 ether;
+    uint256 public constant COLLATERAL_AMOUNT = 3; // Small amount for testnet
 
     function setUp() public {
         token = new MockERC20();
@@ -36,11 +36,11 @@ contract CommuneOSTest is Test {
         member2 = vm.addr(member2PrivateKey);
         member3 = vm.addr(member3PrivateKey);
 
-        // Mint tokens for testing
-        token.mint(creator, 100 ether);
-        token.mint(member1, 100 ether);
-        token.mint(member2, 100 ether);
-        token.mint(member3, 100 ether);
+        // Mint tokens for testing (small amounts)
+        token.mint(creator, 1000);
+        token.mint(member1, 1000);
+        token.mint(member2, 1000);
+        token.mint(member3, 1000);
     }
 
     function testCreateCommune() public {
@@ -227,7 +227,7 @@ contract CommuneOSTest is Test {
         // Check dispute is not yet resolved after 1 vote
         Dispute memory disputeAfterVote1 = communeOS.votingModule().getDispute(disputeId);
         assertEq(disputeAfterVote1.votesFor, 1);
-        assertFalse(disputeAfterVote1.resolved);
+        assertTrue(disputeAfterVote1.status == DisputeStatus.Pending);
 
         vm.prank(member2);
         communeOS.voteOnDispute(communeId, disputeId, true);
@@ -238,8 +238,7 @@ contract CommuneOSTest is Test {
         assertEq(dispute.proposedNewAssignee, member3);
         assertEq(dispute.votesFor, 2); // creator and member2 voted for
         assertEq(dispute.votesAgainst, 0);
-        assertTrue(dispute.resolved); // Auto-resolved when 2/3 majority reached
-        assertTrue(dispute.upheld); // Dispute was upheld
+        assertTrue(dispute.status == DisputeStatus.Upheld); // Dispute was upheld
 
         // Verify expense is marked as disputed
         Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
@@ -292,8 +291,8 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(member1);
 
-        // Try to join with insufficient collateral (only approve half)
-        token.approve(address(communeOS.collateralManager()), 0.5 ether);
+        // Try to join with insufficient collateral (only approve 1, need 3)
+        token.approve(address(communeOS.collateralManager()), 1);
         vm.expectRevert(); // Will revert on transferFrom due to insufficient approval
         communeOS.joinCommune(communeId, nonce, signature);
 

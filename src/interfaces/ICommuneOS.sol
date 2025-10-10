@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {Commune} from "./ICommuneRegistry.sol";
 import {ChoreSchedule} from "./IChoreScheduler.sol";
@@ -22,9 +22,9 @@ interface ICommuneOS {
         bool collateralRequired,
         uint256 collateralAmount,
         ChoreSchedule[] memory choreSchedules
-    ) external payable returns (uint256 communeId);
+    ) external returns (uint256 communeId);
 
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable;
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external;
 
     function markChoreComplete(uint256 communeId, uint256 choreId) external;
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @notice Represents a commune - a group living arrangement with shared responsibilities
 /// @dev Commune IDs start at 1 (0 is reserved as a sentinel value)

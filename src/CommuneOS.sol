@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "./interfaces/ICommuneOS.sol";
+import {DisputeStatus} from "./interfaces/IVotingModule.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
@@ -32,15 +33,16 @@ contract CommuneOS is ICommuneOS {
     CollateralManager public collateralManager;
 
     /// @notice Initializes CommuneOS with all module contracts
-    /// @param collateralToken Address of ERC20 token for collateral (address(0) for native ETH)
+    /// @param collateralToken Address of ERC20 token for collateral
     /// @dev Creates all module contracts in constructor for atomic deployment
+    /// @dev Reverts if collateralToken is address(0) - validation happens in CollateralManager
     constructor(address collateralToken) {
         communeRegistry = new CommuneRegistry();
         memberRegistry = new MemberRegistry();
         choreScheduler = new ChoreScheduler();
         expenseManager = new ExpenseManager();
         votingModule = new VotingModule();
-        collateralManager = new CollateralManager(collateralToken);
+        collateralManager = new CollateralManager(collateralToken); // Validates token address
     }
 
     /// @notice Create a new commune with initial chore schedules
@@ -54,7 +56,7 @@ contract CommuneOS is ICommuneOS {
         bool collateralRequired,
         uint256 collateralAmount,
         ChoreSchedule[] memory choreSchedules
-    ) external payable returns (uint256 communeId) {
+    ) external returns (uint256 communeId) {
         // Create the commune
         communeId = communeRegistry.createCommune(name, msg.sender, collateralRequired, collateralAmount);
 
@@ -67,7 +69,7 @@ contract CommuneOS is ICommuneOS {
         uint256 depositedCollateral = 0;
         if (collateralRequired) {
             depositedCollateral = collateralAmount;
-            collateralManager.depositCollateral{value: msg.value}(msg.sender, collateralAmount);
+            collateralManager.depositCollateral(msg.sender, collateralAmount);
         }
 
         // Register creator as first member
@@ -81,7 +83,7 @@ contract CommuneOS is ICommuneOS {
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
     /// @dev Validates invite, handles collateral deposit if required, and registers member
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external {
         // Validate the invite
         if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
 
@@ -92,7 +94,7 @@ contract CommuneOS is ICommuneOS {
         uint256 collateralAmount = 0;
         if (commune.collateralRequired) {
             collateralAmount = commune.collateralAmount;
-            collateralManager.depositCollateral{value: msg.value}(msg.sender, collateralAmount);
+            collateralManager.depositCollateral(msg.sender, collateralAmount);
         }
 
         // Mark nonce as used
@@ -195,7 +197,32 @@ contract CommuneOS is ICommuneOS {
         // Get total member count for the commune
         uint256 totalMembers = memberRegistry.getMemberCount(communeId);
 
+        // Cast vote
         votingModule.voteOnDispute(disputeId, msg.sender, support, totalMembers);
+
+        // Check if dispute was resolved by this vote
+        Dispute memory dispute = votingModule.getDispute(disputeId);
+
+        if (dispute.status == DisputeStatus.Upheld) {
+            // Get expense details
+            Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
+            address oldAssignee = expense.assignedTo;
+            address newAssignee = dispute.proposedNewAssignee;
+
+            // Calculate slash amount (min of expense amount and available collateral)
+            uint256 availableCollateral = collateralManager.getCollateralBalance(oldAssignee);
+            uint256 slashAmount = expense.amount < availableCollateral ? expense.amount : availableCollateral;
+
+            // Slash collateral and transfer to new assignee if amount > 0
+            if (slashAmount > 0) {
+                collateralManager.slashCollateral(oldAssignee, slashAmount, newAssignee);
+            }
+
+            // Create a new expense as a copy for the new assignee
+            expenseManager.createExpense(
+                expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
+            );
+        }
     }
 
     // View functions
