@@ -2,35 +2,13 @@
 pragma solidity ^0.8.20;
 
 import "./interfaces/ICommuneOS.sol";
-import {DisputeStatus} from "./interfaces/IVotingModule.sol";
-import "./CommuneRegistry.sol";
-import "./MemberRegistry.sol";
-import "./ChoreScheduler.sol";
-import "./ExpenseManager.sol";
-import "./VotingModule.sol";
-import "./CollateralManager.sol";
+import {DisputeStatus, Dispute} from "./interfaces/IVotingModule.sol";
+import "./CommuneViewer.sol";
 
 /// @title CommuneOS
 /// @notice Main contract integrating all commune management modules
 /// @dev Deployed on Gnosis Chain for low gas fees. Coordinates all module interactions.
-contract CommuneOS is ICommuneOS {
-    /// @notice Registry for commune creation and invite validation
-    CommuneRegistry public communeRegistry;
-
-    /// @notice Registry for commune member management
-    MemberRegistry public memberRegistry;
-
-    /// @notice Scheduler for recurring chore management
-    ChoreScheduler public choreScheduler;
-
-    /// @notice Manager for expense tracking and assignment
-    ExpenseManager public expenseManager;
-
-    /// @notice Voting system for dispute resolution
-    VotingModule public votingModule;
-
-    /// @notice Manager for member collateral deposits and slashing
-    CollateralManager public collateralManager;
+contract CommuneOS is CommuneViewer, ICommuneOS {
 
     /// @notice Modifier to check if caller is a member of the commune
     /// @param communeId The commune ID to check membership for
@@ -216,26 +194,5 @@ contract CommuneOS is ICommuneOS {
                 expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
             );
         }
-    }
-
-    // View functions
-
-    /// @notice Get commune statistics
-    /// @param communeId The commune ID
-    /// @return commune The commune data
-    /// @return memberCount Number of members
-    /// @return choreCount Number of chore schedules
-    /// @return expenseCount Number of expenses
-    function getCommuneStatistics(uint256 communeId)
-        external
-        view
-        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount)
-    {
-        commune = communeRegistry.getCommune(communeId);
-        memberCount = memberRegistry.getMemberCount(communeId);
-        choreCount = choreScheduler.getChoreSchedules(communeId).length;
-        expenseCount = expenseManager.getCommuneExpenses(communeId).length;
-
-        return (commune, memberCount, choreCount, expenseCount);
     }
 }
