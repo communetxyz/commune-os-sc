@@ -98,7 +98,7 @@ jobs:
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --verifier blockscout \
             --verifier-url https://gnosis.blockscout.com/api \
-            --watch || true
+            --watch
 
           sleep 10
 
@@ -127,7 +127,7 @@ jobs:
               --num-of-optimizations 200 \
               --verifier blockscout \
               --verifier-url https://gnosis.blockscout.com/api \
-              --watch || true
+              --watch
 
             sleep 10
           done
