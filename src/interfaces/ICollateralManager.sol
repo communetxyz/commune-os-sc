@@ -10,10 +10,10 @@ interface ICollateralManager {
 
     // Errors
     error InvalidDepositAmount();
-    error TransferFailed();
+    error InvalidTokenAddress();
 
     // Functions
-    function depositCollateral(address member, uint256 amount) external payable;
+    function depositCollateral(address member, uint256 amount) external;
 
     function slashCollateral(address member, uint256 amount, address recipient) external;
 
