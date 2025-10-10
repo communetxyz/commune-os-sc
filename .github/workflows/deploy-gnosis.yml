@@ -71,6 +71,65 @@ jobs:
 
           echo "Deployed CommuneOS to: $COMMUNE_OS"
 
+      - name: Wait for blockchain indexing
+        run: sleep 60
+
+      - name: Verify contracts on Blockscout
+        env:
+          GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
+        run: |
+          # Get the exact compiler version metadata from the compiled artifact
+          COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
+
+          # Read collateral token from config
+          COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/gnosis.json)
+
+          echo "Verifying CollateralManager..."
+          forge verify-contract \
+            ${{ steps.deploy.outputs.collateral_manager }} \
+            src/CollateralManager.sol:CollateralManager \
+            --chain-id 100 \
+            --compiler-version "v${COMPILER_VERSION}" \
+            --num-of-optimizations 200 \
+            --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
+            --verifier blockscout \
+            --verifier-url https://gnosis.blockscout.com/api \
+            --watch || true
+
+          sleep 10
+
+          # Verify module contracts (no constructor args)
+          for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "ExpenseManager" "VotingModule"; do
+            echo "Verifying $contract..."
+
+            # Get the address from outputs
+            if [ "$contract" = "CommuneRegistry" ]; then
+              ADDRESS="${{ steps.deploy.outputs.commune_registry }}"
+            elif [ "$contract" = "MemberRegistry" ]; then
+              ADDRESS="${{ steps.deploy.outputs.member_registry }}"
+            elif [ "$contract" = "ChoreScheduler" ]; then
+              ADDRESS="${{ steps.deploy.outputs.chore_scheduler }}"
+            elif [ "$contract" = "ExpenseManager" ]; then
+              ADDRESS="${{ steps.deploy.outputs.expense_manager }}"
+            elif [ "$contract" = "VotingModule" ]; then
+              ADDRESS="${{ steps.deploy.outputs.voting_module }}"
+            fi
+
+            forge verify-contract \
+              $ADDRESS \
+              src/$contract.sol:$contract \
+              --chain-id 100 \
+              --compiler-version "v${COMPILER_VERSION}" \
+              --num-of-optimizations 200 \
+              --verifier blockscout \
+              --verifier-url https://gnosis.blockscout.com/api \
+              --watch || true
+
+            sleep 10
+          done
+
+          echo "Contract verification complete!"
+
       - name: Create deployment summary
         run: |
           echo "## 🚀 Gnosis Chain Mainnet Deployment" >> $GITHUB_STEP_SUMMARY
