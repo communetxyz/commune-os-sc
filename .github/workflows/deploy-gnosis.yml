@@ -48,10 +48,14 @@ jobs:
           GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
           CONFIG_PATH: config/gnosis.json
         run: |
+          # Use --resume to handle pending transactions
           DEPLOY_OUTPUT=$(forge script script/Deploy.s.sol:DeployScript \
             --rpc-url $GNOSIS_RPC_URL \
             --broadcast \
-            --slow \
+            --resume \
+            -vvvv 2>&1 || forge script script/Deploy.s.sol:DeployScript \
+            --rpc-url $GNOSIS_RPC_URL \
+            --broadcast \
             -vvvv)
 
           echo "$DEPLOY_OUTPUT"
