@@ -79,8 +79,6 @@ jobs:
         run: sleep 60
 
       - name: Verify contracts on Blockscout
-        env:
-          GNOSIS_RPC_URL: ${{ secrets.GNOSIS_RPC_URL }}
         run: |
           # Get the exact compiler version metadata from the compiled artifact
           COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
