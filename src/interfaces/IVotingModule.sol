@@ -3,9 +3,10 @@ pragma solidity ^0.8.20;
 
 /// @notice Status of a dispute
 enum DisputeStatus {
-    Pending,    // Voting in progress
-    Upheld,     // Dispute accepted, reassignment occurs
-    Rejected    // Dispute rejected, no changes
+    Pending, // Voting in progress
+    Upheld, // Dispute accepted, reassignment occurs
+    Rejected // Dispute rejected, no changes
+
 }
 
 /// @notice Represents a dispute over an expense assignment

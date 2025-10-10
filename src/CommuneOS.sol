@@ -220,11 +220,7 @@ contract CommuneOS is ICommuneOS {
 
             // Create a new expense as a copy for the new assignee
             expenseManager.createExpense(
-                expense.communeId,
-                expense.amount,
-                expense.description,
-                expense.dueDate,
-                newAssignee
+                expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
             );
         }
     }
