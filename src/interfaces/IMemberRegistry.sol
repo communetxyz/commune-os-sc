@@ -17,12 +17,24 @@ struct Member {
 interface IMemberRegistry {
     // Events
     event MemberRegistered(address indexed member, uint256 indexed communeId, uint256 collateral, uint256 timestamp);
+    event MemberJoined(address indexed member, uint256 indexed communeId, uint256 collateralAmount, uint256 timestamp);
 
     // Errors
     error InvalidAddress();
     error AlreadyRegistered();
+    error InvalidInvite();
+    error NonceAlreadyUsed();
+    error InvalidSignatureLength();
 
     // Functions
+    function validateInvite(uint256 communeId, address creatorAddress, uint256 nonce, bytes memory signature)
+        external
+        view;
+
+    function joinCommune(uint256 communeId, address memberAddress, uint256 nonce, uint256 collateralAmount) external;
+
+    function isNonceUsed(uint256 communeId, uint256 nonce) external view returns (bool);
+
     function registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) external;
 
     function isMember(uint256 communeId, address memberAddress) external view returns (bool);

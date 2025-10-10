@@ -8,7 +8,7 @@ import "./CommuneOSModule.sol";
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
-/// @dev Only supports ERC20 tokens for collateral
+/// @dev Supports ERC20 tokens for collateral
 contract CollateralManager is CommuneOSModule, ICollateralManager {
     using SafeERC20 for IERC20;
 
@@ -23,21 +23,20 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     error InsufficientCollateral();
 
     /// @notice Initializes the CollateralManager with token configuration
-    /// @param _collateralToken Address of ERC20 token for collateral
-    /// @dev Reverts if token address is zero
+    /// @param _collateralToken Address of ERC20 token
     constructor(address _collateralToken) {
-        if (_collateralToken == address(0)) revert InvalidDepositAmount();
+        if (_collateralToken == address(0)) revert InvalidTokenAddress();
         collateralToken = IERC20(_collateralToken);
     }
 
     /// @notice Deposit collateral for a member
     /// @param member The member address
     /// @param amount The amount to deposit
-    /// @dev Uses SafeERC20 for secure token transfers
+    /// @dev Uses safeTransferFrom to pull ERC20 tokens from member
     function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
         if (amount == 0) revert InvalidDepositAmount();
 
-        // SafeERC20 transfer - automatically reverts on failure
+        // ERC20 token transfer using SafeERC20
         collateralToken.safeTransferFrom(member, address(this), amount);
 
         collateralBalance[member] += amount;

@@ -93,7 +93,7 @@ contract CommuneOSTest is Test {
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         communeOS.joinCommune(communeId, nonce, signature);
 
-        assertEq(communeOS.getCollateralBalance(member1), COLLATERAL_AMOUNT);
+        assertEq(communeOS.collateralManager().getCollateralBalance(member1), COLLATERAL_AMOUNT);
 
         (, uint256 memberCount,,) = communeOS.getCommuneStatistics(communeId);
         assertEq(memberCount, 2);
@@ -114,7 +114,7 @@ contract CommuneOSTest is Test {
 
         // Check completion
         (ChoreSchedule[] memory returnedSchedules, uint256[] memory periods, bool[] memory completed) =
-            communeOS.getCurrentChores(communeId);
+            communeOS.choreScheduler().getCurrentChores(communeId);
 
         assertEq(returnedSchedules.length, 1);
         assertEq(periods[0], 0); // Current period
@@ -150,7 +150,7 @@ contract CommuneOSTest is Test {
 
         assertEq(expenseId, 0);
 
-        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
         assertEq(expenses.length, 1);
         assertEq(expenses[0].amount, 100 ether);
         assertEq(expenses[0].assignedTo, member1);
@@ -189,7 +189,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(member1);
         communeOS.markExpensePaid(communeId, expenseId);
 
-        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
         assertTrue(expenses[0].paid);
 
         vm.stopPrank();
@@ -241,7 +241,7 @@ contract CommuneOSTest is Test {
         assertTrue(dispute.status == DisputeStatus.Upheld); // Dispute was upheld
 
         // Verify expense is marked as disputed
-        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
         assertTrue(expenses[0].disputed);
     }
 
@@ -254,21 +254,21 @@ contract CommuneOSTest is Test {
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
 
         // Check period 0
-        (, uint256[] memory periods0,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods0,) = communeOS.choreScheduler().getCurrentChores(communeId);
         assertEq(periods0[0], 0);
 
         // Advance time by 1 day
         vm.warp(block.timestamp + 1 days);
 
         // Check period 1
-        (, uint256[] memory periods1,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods1,) = communeOS.choreScheduler().getCurrentChores(communeId);
         assertEq(periods1[0], 1);
 
         // Advance time by 5 more days
         vm.warp(block.timestamp + 5 days);
 
         // Check period 6
-        (, uint256[] memory periods6,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods6,) = communeOS.choreScheduler().getCurrentChores(communeId);
         assertEq(periods6[0], 6);
 
         vm.stopPrank();

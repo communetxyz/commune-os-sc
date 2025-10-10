@@ -6,6 +6,9 @@ solc_version = "0.8.20"
 optimizer = true
 optimizer_runs = 200
 fs_permissions = [{ access = "read", path = "./config" }]
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+]
 
 [rpc_endpoints]
 gnosis = "https://rpc.gnosischain.com"
