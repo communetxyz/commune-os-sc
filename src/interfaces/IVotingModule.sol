@@ -1,6 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/// @notice Status of a dispute
+enum DisputeStatus {
+    Pending,    // Voting in progress
+    Upheld,     // Dispute accepted, reassignment occurs
+    Rejected    // Dispute rejected, no changes
+}
+
 /// @notice Represents a dispute over an expense assignment
 /// @dev Disputes auto-resolve when 2/3 majority is reached
 struct Dispute {
@@ -12,10 +19,8 @@ struct Dispute {
     uint256 votesFor;
     /// @notice Number of votes against the dispute
     uint256 votesAgainst;
-    /// @notice Whether the dispute has been resolved
-    bool resolved;
-    /// @notice If resolved, whether the dispute was upheld (true) or rejected (false)
-    bool upheld;
+    /// @notice Current status of the dispute
+    DisputeStatus status;
     /// @notice Unix timestamp when the dispute was created
     uint256 createdAt;
 }

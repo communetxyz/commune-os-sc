@@ -2,6 +2,7 @@
 pragma solidity ^0.8.20;
 
 import "./interfaces/ICommuneOS.sol";
+import {DisputeStatus} from "./interfaces/IVotingModule.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
@@ -202,7 +203,7 @@ contract CommuneOS is ICommuneOS {
         // Check if dispute was resolved by this vote
         Dispute memory dispute = votingModule.getDispute(disputeId);
 
-        if (dispute.resolved && dispute.upheld) {
+        if (dispute.status == DisputeStatus.Upheld) {
             // Get expense details
             Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
             address oldAssignee = expense.assignedTo;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Dispute} from "./interfaces/IVotingModule.sol";
+import {Dispute, DisputeStatus} from "./interfaces/IVotingModule.sol";
 import "./interfaces/IVotingModule.sol";
 import "./CommuneOSModule.sol";
 
@@ -48,8 +48,7 @@ contract VotingModule is CommuneOSModule, IVotingModule {
             proposedNewAssignee: proposedNewAssignee,
             votesFor: 0,
             votesAgainst: 0,
-            resolved: false,
-            upheld: false,
+            status: DisputeStatus.Pending,
             createdAt: block.timestamp
         });
 
@@ -68,7 +67,7 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         onlyCommuneOS
     {
         if (disputeId >= disputeCount) revert InvalidDisputeId();
-        if (disputes[disputeId].resolved) revert AlreadyResolved();
+        if (disputes[disputeId].status != DisputeStatus.Pending) revert AlreadyResolved();
         if (hasVoted[disputeId][voter]) revert AlreadyVoted();
 
         hasVoted[disputeId][voter] = true;
@@ -94,13 +93,11 @@ contract VotingModule is CommuneOSModule, IVotingModule {
 
         if (dispute.votesFor >= requiredVotes) {
             // 2/3 voted in favor - dispute is upheld
-            dispute.resolved = true;
-            dispute.upheld = true;
+            dispute.status = DisputeStatus.Upheld;
             emit DisputeResolved(disputeId, true);
         } else if (dispute.votesAgainst >= requiredVotes) {
             // 2/3 voted against - dispute is rejected
-            dispute.resolved = true;
-            dispute.upheld = false;
+            dispute.status = DisputeStatus.Rejected;
             emit DisputeResolved(disputeId, false);
         }
     }
