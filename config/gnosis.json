@@ -1,5 +1,38 @@
 {
   "network": "gnosis",
   "chainId": 100,
-  "collateralToken": "0xa555d5344f6FB6c65da19e403Cb4c1eC4a1a5Ee3"
+  "collateralToken": "0xa555d5344f6FB6c65da19e403Cb4c1eC4a1a5Ee3",
+  "collateralAmount": "1000000000000000000",
+  "chores": [
+    {
+      "title": "washing the dishes (soaping)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "washing the dishes (washing)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "washing the dishes (drying)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "tidying up the shower room and laundry area",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "cleaning the upstairs food area",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "cleaning the tables and floor after dinner",
+      "frequency": 86400,
+      "description": "every day"
+    }
+  ]
 }
