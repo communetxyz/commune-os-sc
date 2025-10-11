@@ -44,9 +44,15 @@ contract DeployScript is Script {
 
         // Initialize commune if chores are provided
         if (bytes(choresJson).length > 0) {
-            // Parse chores from config
-            bytes memory choresData = vm.parseJson(json, ".chores");
-            uint256 choreCount = vm.parseJson(json, ".chores").length / 96; // Approximate chore count
+            // Count chores by trying to parse each index
+            uint256 choreCount = 0;
+            for (uint256 i = 0; i < 100; i++) {
+                try vm.parseJsonString(json, string(abi.encodePacked(".chores[", vm.toString(i), "].title"))) {
+                    choreCount++;
+                } catch {
+                    break;
+                }
+            }
 
             ChoreSchedule[] memory choreSchedules = new ChoreSchedule[](choreCount);
 
