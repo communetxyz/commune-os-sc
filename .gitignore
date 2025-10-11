@@ -12,3 +12,7 @@ docs/
 
 # Dotenv file
 .env
+
+# Generated invites (contain sensitive signatures)
+invites/*
+!invites/.gitkeep
