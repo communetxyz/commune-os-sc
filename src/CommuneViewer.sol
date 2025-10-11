@@ -121,34 +121,74 @@ abstract contract CommuneViewer {
         }
     }
 
-    /// @notice Get chore schedules with their current status for a user's commune
+    /// @notice Get all chore instances for a date range with completion status
     /// @param user The user address to find commune for
+    /// @param startDate Unix timestamp for the start of the period
+    /// @param endDate Unix timestamp for the end of the period
     /// @return communeId The commune ID the user belongs to
-    /// @return schedules Array of chore schedules
-    /// @return currentPeriods Current period number for each schedule
-    /// @return completionStatus Completion status for current period of each schedule
-    function getCommuneChores(address user)
+    /// @return instances Array of all chore instances in the date range
+    function getCommuneChores(address user, uint256 startDate, uint256 endDate)
         external
         view
-        returns (
-            uint256 communeId,
-            ChoreSchedule[] memory schedules,
-            uint256[] memory currentPeriods,
-            bool[] memory completionStatus
-        )
+        returns (uint256 communeId, ChoreInstance[] memory instances)
     {
         // Get the commune this user belongs to
         communeId = memberRegistry.memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
-        schedules = choreScheduler.getChoreSchedules(communeId);
-        currentPeriods = new uint256[](schedules.length);
-        completionStatus = new bool[](schedules.length);
+        ChoreSchedule[] memory schedules = choreScheduler.getChoreSchedules(communeId);
+        address[] memory members = memberRegistry.getCommuneMembers(communeId);
 
+        // Estimate max instances (schedules * days in range / 1 day min frequency)
+        uint256 daysInRange = (endDate - startDate) / 1 days + 1;
+        uint256 maxInstances = schedules.length * daysInRange;
+        instances = new ChoreInstance[](maxInstances);
+
+        uint256 instanceCount = 0;
+
+        // Generate instances for each schedule
         for (uint256 i = 0; i < schedules.length; i++) {
-            currentPeriods[i] = choreScheduler.getCurrentPeriod(communeId, schedules[i].id);
-            completionStatus[i] = choreScheduler.isChoreComplete(communeId, schedules[i].id, currentPeriods[i]);
+            ChoreSchedule memory schedule = schedules[i];
+
+            // Skip if schedule hasn't started yet or started after the range
+            if (schedule.startTime >= endDate) continue;
+
+            // Calculate first instance in the range
+            uint256 instanceStart = schedule.startTime;
+            if (instanceStart < startDate) {
+                uint256 periodsSinceStart = (startDate - schedule.startTime) / schedule.frequency;
+                instanceStart = schedule.startTime + (periodsSinceStart * schedule.frequency);
+            }
+
+            // Generate all instances in the date range
+            while (instanceStart < endDate) {
+                uint256 periodEnd = instanceStart + schedule.frequency;
+                uint256 period = choreScheduler.getCurrentPeriod(communeId, schedule.id);
+                bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
+                address assignee = choreScheduler.getChoreAssignee(communeId, schedule.id, members);
+
+                instances[instanceCount] = ChoreInstance({
+                    scheduleId: schedule.id,
+                    title: schedule.title,
+                    frequency: schedule.frequency,
+                    periodNumber: period,
+                    periodStart: instanceStart,
+                    periodEnd: periodEnd,
+                    assignedTo: assignee,
+                    completed: isComplete
+                });
+
+                instanceCount++;
+                instanceStart += schedule.frequency;
+            }
         }
+
+        // Trim array to actual size
+        ChoreInstance[] memory trimmedInstances = new ChoreInstance[](instanceCount);
+        for (uint256 i = 0; i < instanceCount; i++) {
+            trimmedInstances[i] = instances[i];
+        }
+        instances = trimmedInstances;
     }
 
     /// @notice Get expenses for a specific month, categorized by status for a user's commune

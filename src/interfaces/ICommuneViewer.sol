@@ -45,15 +45,10 @@ interface ICommuneViewer {
             uint256[] memory memberCollaterals
         );
 
-    function getCommuneChores(address user)
+    function getCommuneChores(address user, uint256 startDate, uint256 endDate)
         external
         view
-        returns (
-            uint256 communeId,
-            ChoreSchedule[] memory schedules,
-            uint256[] memory currentPeriods,
-            bool[] memory completionStatus
-        );
+        returns (uint256 communeId, ChoreInstance[] memory instances);
 
     function getCommuneExpenses(address user, uint256 monthStart, uint256 monthEnd)
         external
