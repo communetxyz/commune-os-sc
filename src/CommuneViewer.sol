@@ -88,16 +88,21 @@ abstract contract CommuneViewer {
         return collateralManager.getCollateralBalance(member);
     }
 
-    /// @notice Get basic commune info and members with their collaterals
-    /// @param communeId The commune ID
+    /// @notice Get basic commune info and members with their collaterals for a user
+    /// @param user The user address to find commune for
+    /// @return communeId The commune ID the user belongs to
     /// @return communeData The commune basic information
     /// @return members Array of all member addresses
     /// @return memberCollaterals Collateral balance for each member (parallel to members array)
-    function getCommuneBasicInfo(uint256 communeId)
+    function getCommuneBasicInfo(address user)
         external
         view
-        returns (Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals)
+        returns (uint256 communeId, Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals)
     {
+        // Get the commune this user belongs to
+        communeId = memberRegistry.memberCommuneId(user);
+        require(communeId != 0, "User is not a member of any commune");
+
         // Get commune basic data
         communeData = communeRegistry.getCommune(communeId);
 
@@ -111,20 +116,26 @@ abstract contract CommuneViewer {
         }
     }
 
-    /// @notice Get chore schedules with their current status
-    /// @param communeId The commune ID
+    /// @notice Get chore schedules with their current status for a user's commune
+    /// @param user The user address to find commune for
+    /// @return communeId The commune ID the user belongs to
     /// @return schedules Array of chore schedules
     /// @return currentPeriods Current period number for each schedule
     /// @return completionStatus Completion status for current period of each schedule
-    function getCommuneChores(uint256 communeId)
+    function getCommuneChores(address user)
         external
         view
         returns (
+            uint256 communeId,
             ChoreSchedule[] memory schedules,
             uint256[] memory currentPeriods,
             bool[] memory completionStatus
         )
     {
+        // Get the commune this user belongs to
+        communeId = memberRegistry.memberCommuneId(user);
+        require(communeId != 0, "User is not a member of any commune");
+
         schedules = choreScheduler.getChoreSchedules(communeId);
         currentPeriods = new uint256[](schedules.length);
         completionStatus = new bool[](schedules.length);
@@ -135,25 +146,31 @@ abstract contract CommuneViewer {
         }
     }
 
-    /// @notice Get expenses for a specific month, categorized by status
-    /// @param communeId The commune ID
+    /// @notice Get expenses for a specific month, categorized by status for a user's commune
+    /// @param user The user address to find commune for
     /// @param monthStart Unix timestamp of the start of the month
     /// @param monthEnd Unix timestamp of the end of the month (start of next month)
+    /// @return communeId The commune ID the user belongs to
     /// @return paidExpenses Expenses that have been paid (specified month only)
     /// @return pendingExpenses Expenses not paid and not disputed (specified month only)
     /// @return disputedExpenses Expenses currently under dispute (specified month only)
     /// @return overdueExpenses Expenses past due date and unpaid (specified month only)
-    function getCommuneExpenses(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+    function getCommuneExpenses(address user, uint256 monthStart, uint256 monthEnd)
         external
         view
         returns (
+            uint256 communeId,
             Expense[] memory paidExpenses,
             Expense[] memory pendingExpenses,
             Expense[] memory disputedExpenses,
             Expense[] memory overdueExpenses
         )
     {
-        return _getMonthExpenses(communeId, monthStart, monthEnd);
+        // Get the commune this user belongs to
+        communeId = memberRegistry.memberCommuneId(user);
+        require(communeId != 0, "User is not a member of any commune");
+
+        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) = _getMonthExpenses(communeId, monthStart, monthEnd);
     }
 
     /// @notice Get expenses for specified month only, categorized by status

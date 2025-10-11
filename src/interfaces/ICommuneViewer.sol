@@ -35,24 +35,26 @@ interface ICommuneViewer {
 
     function getCollateralBalance(address member) external view returns (uint256);
 
-    function getCommuneBasicInfo(uint256 communeId)
+    function getCommuneBasicInfo(address user)
         external
         view
-        returns (Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals);
+        returns (uint256 communeId, Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals);
 
-    function getCommuneChores(uint256 communeId)
+    function getCommuneChores(address user)
         external
         view
         returns (
+            uint256 communeId,
             ChoreSchedule[] memory schedules,
             uint256[] memory currentPeriods,
             bool[] memory completionStatus
         );
 
-    function getCommuneExpenses(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+    function getCommuneExpenses(address user, uint256 monthStart, uint256 monthEnd)
         external
         view
         returns (
+            uint256 communeId,
             Expense[] memory paidExpenses,
             Expense[] memory pendingExpenses,
             Expense[] memory disputedExpenses,
