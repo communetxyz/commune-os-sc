@@ -88,33 +88,15 @@ abstract contract CommuneViewer {
         return collateralManager.getCollateralBalance(member);
     }
 
-    /// @notice Comprehensive view function returning all commune data organized for frontend
+    /// @notice Get basic commune info and members with their collaterals
     /// @param communeId The commune ID
-    /// @param monthStart Unix timestamp of the start of the month
-    /// @param monthEnd Unix timestamp of the end of the month (start of next month)
     /// @return communeData The commune basic information
     /// @return members Array of all member addresses
     /// @return memberCollaterals Collateral balance for each member (parallel to members array)
-    /// @return completedChores All chore instances completed in specified month
-    /// @return pendingChores All chore instances not completed in specified month
-    /// @return paidExpenses Expenses that have been paid (specified month only)
-    /// @return pendingExpenses Expenses not paid and not disputed (specified month only)
-    /// @return disputedExpenses Expenses currently under dispute (specified month only)
-    /// @return overdueExpenses Expenses past due date and unpaid (specified month only)
-    function getCommuneFullView(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+    function getCommuneBasicInfo(uint256 communeId)
         external
         view
-        returns (
-            Commune memory communeData,
-            address[] memory members,
-            uint256[] memory memberCollaterals,
-            ChoreInstance[] memory completedChores,
-            ChoreInstance[] memory pendingChores,
-            Expense[] memory paidExpenses,
-            Expense[] memory pendingExpenses,
-            Expense[] memory disputedExpenses,
-            Expense[] memory overdueExpenses
-        )
+        returns (Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals)
     {
         // Get commune basic data
         communeData = communeRegistry.getCommune(communeId);
@@ -127,25 +109,42 @@ abstract contract CommuneViewer {
         for (uint256 i = 0; i < members.length; i++) {
             memberCollaterals[i] = collateralManager.getCollateralBalance(members[i]);
         }
+    }
 
-        // Get and categorize chore instances for specified month
-        (completedChores, pendingChores) = _getMonthChoreInstances(communeId, members, monthStart, monthEnd);
+    /// @notice Get chore instances for a specific month, categorized by completion status
+    /// @param communeId The commune ID
+    /// @param monthStart Unix timestamp of the start of the month
+    /// @param monthEnd Unix timestamp of the end of the month (start of next month)
+    /// @return completedChores All chore instances completed in specified month
+    /// @return pendingChores All chore instances not completed in specified month
+    function getCommuneChores(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+        external
+        view
+        returns (ChoreInstance[] memory completedChores, ChoreInstance[] memory pendingChores)
+    {
+        address[] memory members = memberRegistry.getCommuneMembers(communeId);
+        return _getMonthChoreInstances(communeId, members, monthStart, monthEnd);
+    }
 
-        // Get and categorize expenses for specified month
-        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) =
-            _getMonthExpenses(communeId, monthStart, monthEnd);
-
-        return (
-            communeData,
-            members,
-            memberCollaterals,
-            completedChores,
-            pendingChores,
-            paidExpenses,
-            pendingExpenses,
-            disputedExpenses,
-            overdueExpenses
-        );
+    /// @notice Get expenses for a specific month, categorized by status
+    /// @param communeId The commune ID
+    /// @param monthStart Unix timestamp of the start of the month
+    /// @param monthEnd Unix timestamp of the end of the month (start of next month)
+    /// @return paidExpenses Expenses that have been paid (specified month only)
+    /// @return pendingExpenses Expenses not paid and not disputed (specified month only)
+    /// @return disputedExpenses Expenses currently under dispute (specified month only)
+    /// @return overdueExpenses Expenses past due date and unpaid (specified month only)
+    function getCommuneExpenses(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+        external
+        view
+        returns (
+            Expense[] memory paidExpenses,
+            Expense[] memory pendingExpenses,
+            Expense[] memory disputedExpenses,
+            Expense[] memory overdueExpenses
+        )
+    {
+        return _getMonthExpenses(communeId, monthStart, monthEnd);
     }
 
     /// @notice Generate all chore instances for specified month
@@ -167,25 +166,44 @@ abstract contract CommuneViewer {
         uint256 pIdx = 0;
 
         for (uint256 i = 0; i < schedules.length; i++) {
-            ChoreSchedule memory schedule = schedules[i];
+            (cIdx, pIdx) = _processSchedule(
+                communeId, schedules[i], members, monthStart, monthEnd, completedChores, pendingChores, cIdx, pIdx
+            );
+        }
 
-            // Skip if schedule starts after the month
-            if (schedule.startTime >= monthEnd) continue;
+        return (completedChores, pendingChores);
+    }
 
-            uint256 instanceStart = schedule.startTime;
-            if (instanceStart < monthStart) {
-                // Calculate first instance in specified month
-                uint256 periodsSinceStart = (monthStart - schedule.startTime) / schedule.frequency;
-                instanceStart = schedule.startTime + (periodsSinceStart * schedule.frequency);
-            }
+    /// @notice Process a single schedule and generate instances
+    function _processSchedule(
+        uint256 communeId,
+        ChoreSchedule memory schedule,
+        address[] memory members,
+        uint256 monthStart,
+        uint256 monthEnd,
+        ChoreInstance[] memory completedChores,
+        ChoreInstance[] memory pendingChores,
+        uint256 cIdx,
+        uint256 pIdx
+    ) internal view returns (uint256, uint256) {
+        // Skip if schedule starts after the month
+        if (schedule.startTime >= monthEnd) return (cIdx, pIdx);
 
-            // Generate all instances in this month
-            while (instanceStart < monthEnd) {
-                uint256 period = choreScheduler.getCurrentPeriod(communeId, schedule.id);
-                bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
-                address assignee = choreScheduler.getChoreAssignee(communeId, schedule.id, members);
+        uint256 instanceStart = schedule.startTime;
+        if (instanceStart < monthStart) {
+            // Calculate first instance in specified month
+            uint256 periodsSinceStart = (monthStart - schedule.startTime) / schedule.frequency;
+            instanceStart = schedule.startTime + (periodsSinceStart * schedule.frequency);
+        }
 
-                ChoreInstance memory instance = ChoreInstance({
+        // Generate all instances in this month
+        while (instanceStart < monthEnd) {
+            uint256 period = choreScheduler.getCurrentPeriod(communeId, schedule.id);
+            bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
+            address assignee = choreScheduler.getChoreAssignee(communeId, schedule.id, members);
+
+            if (isComplete) {
+                completedChores[cIdx] = ChoreInstance({
                     scheduleId: schedule.id,
                     title: schedule.title,
                     frequency: schedule.frequency,
@@ -193,20 +211,27 @@ abstract contract CommuneViewer {
                     periodStart: instanceStart,
                     periodEnd: instanceStart + schedule.frequency,
                     assignedTo: assignee,
-                    completed: isComplete
+                    completed: true
                 });
-
-                if (isComplete) {
-                    completedChores[cIdx++] = instance;
-                } else {
-                    pendingChores[pIdx++] = instance;
-                }
-
-                instanceStart += schedule.frequency;
+                cIdx++;
+            } else {
+                pendingChores[pIdx] = ChoreInstance({
+                    scheduleId: schedule.id,
+                    title: schedule.title,
+                    frequency: schedule.frequency,
+                    periodNumber: period,
+                    periodStart: instanceStart,
+                    periodEnd: instanceStart + schedule.frequency,
+                    assignedTo: assignee,
+                    completed: false
+                });
+                pIdx++;
             }
+
+            instanceStart += schedule.frequency;
         }
 
-        return (completedChores, pendingChores);
+        return (cIdx, pIdx);
     }
 
     /// @notice Get expenses for specified month only, categorized by status
