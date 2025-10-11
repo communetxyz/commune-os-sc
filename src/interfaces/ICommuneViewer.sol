@@ -38,7 +38,12 @@ interface ICommuneViewer {
     function getCommuneBasicInfo(address user)
         external
         view
-        returns (uint256 communeId, Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals);
+        returns (
+            uint256 communeId,
+            Commune memory communeData,
+            address[] memory members,
+            uint256[] memory memberCollaterals
+        );
 
     function getCommuneChores(address user)
         external

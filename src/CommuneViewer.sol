@@ -97,7 +97,12 @@ abstract contract CommuneViewer {
     function getCommuneBasicInfo(address user)
         external
         view
-        returns (uint256 communeId, Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals)
+        returns (
+            uint256 communeId,
+            Commune memory communeData,
+            address[] memory members,
+            uint256[] memory memberCollaterals
+        )
     {
         // Get the commune this user belongs to
         communeId = memberRegistry.memberCommuneId(user);
@@ -170,7 +175,8 @@ abstract contract CommuneViewer {
         communeId = memberRegistry.memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
-        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) = _getMonthExpenses(communeId, monthStart, monthEnd);
+        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) =
+            _getMonthExpenses(communeId, monthStart, monthEnd);
     }
 
     /// @notice Get expenses for specified month only, categorized by status
