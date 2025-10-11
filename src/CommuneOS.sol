@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "./interfaces/ICommuneOS.sol";
+import {DisputeStatus} from "./interfaces/IVotingModule.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
@@ -189,7 +190,32 @@ contract CommuneOS is ICommuneOS {
         // Get total member count for the commune
         uint256 totalMembers = memberRegistry.getMemberCount(communeId);
 
+        // Cast vote
         votingModule.voteOnDispute(disputeId, msg.sender, support, totalMembers);
+
+        // Check if dispute was resolved by this vote
+        Dispute memory dispute = votingModule.getDispute(disputeId);
+
+        if (dispute.status == DisputeStatus.Upheld) {
+            // Get expense details
+            Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
+            address oldAssignee = expense.assignedTo;
+            address newAssignee = dispute.proposedNewAssignee;
+
+            // Calculate slash amount (min of expense amount and available collateral)
+            uint256 availableCollateral = collateralManager.getCollateralBalance(oldAssignee);
+            uint256 slashAmount = expense.amount < availableCollateral ? expense.amount : availableCollateral;
+
+            // Slash collateral and transfer to new assignee if amount > 0
+            if (slashAmount > 0) {
+                collateralManager.slashCollateral(oldAssignee, slashAmount, newAssignee);
+            }
+
+            // Create a new expense as a copy for the new assignee
+            expenseManager.createExpense(
+                expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
+            );
+        }
     }
 
     // View functions

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import "./interfaces/ICommuneRegistry.sol";
