@@ -5,7 +5,17 @@
   "collateralAmount": "1000000000000000000",
   "chores": [
     {
-      "title": "washing the dishes",
+      "title": "washing the dishes (soaping)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "washing the dishes (washing)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "washing the dishes (drying)",
       "frequency": 86400,
       "description": "daily"
     },
