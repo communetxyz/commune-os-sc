@@ -97,7 +97,7 @@ jobs:
             --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch || true
+            --watch
 
           sleep 10
 
@@ -111,7 +111,7 @@ jobs:
             --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch || true
+            --watch
 
           sleep 10
 
@@ -139,7 +139,7 @@ jobs:
               --compiler-version "v${COMPILER_VERSION}" \
               --num-of-optimizations 200 \
               --etherscan-api-key $ETHERSCAN_API_KEY \
-              --watch || true
+              --watch
 
             sleep 10
           done
