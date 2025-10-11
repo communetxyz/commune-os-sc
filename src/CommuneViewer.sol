@@ -111,19 +111,28 @@ abstract contract CommuneViewer {
         }
     }
 
-    /// @notice Get chore instances for a specific month, categorized by completion status
+    /// @notice Get chore schedules with their current status
     /// @param communeId The commune ID
-    /// @param monthStart Unix timestamp of the start of the month
-    /// @param monthEnd Unix timestamp of the end of the month (start of next month)
-    /// @return completedChores All chore instances completed in specified month
-    /// @return pendingChores All chore instances not completed in specified month
-    function getCommuneChores(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+    /// @return schedules Array of chore schedules
+    /// @return currentPeriods Current period number for each schedule
+    /// @return completionStatus Completion status for current period of each schedule
+    function getCommuneChores(uint256 communeId)
         external
         view
-        returns (ChoreInstance[] memory completedChores, ChoreInstance[] memory pendingChores)
+        returns (
+            ChoreSchedule[] memory schedules,
+            uint256[] memory currentPeriods,
+            bool[] memory completionStatus
+        )
     {
-        address[] memory members = memberRegistry.getCommuneMembers(communeId);
-        return _getMonthChoreInstances(communeId, members, monthStart, monthEnd);
+        schedules = choreScheduler.getChoreSchedules(communeId);
+        currentPeriods = new uint256[](schedules.length);
+        completionStatus = new bool[](schedules.length);
+
+        for (uint256 i = 0; i < schedules.length; i++) {
+            currentPeriods[i] = choreScheduler.getCurrentPeriod(communeId, schedules[i].id);
+            completionStatus[i] = choreScheduler.isChoreComplete(communeId, schedules[i].id, currentPeriods[i]);
+        }
     }
 
     /// @notice Get expenses for a specific month, categorized by status
@@ -145,93 +154,6 @@ abstract contract CommuneViewer {
         )
     {
         return _getMonthExpenses(communeId, monthStart, monthEnd);
-    }
-
-    /// @notice Generate all chore instances for specified month
-    function _getMonthChoreInstances(uint256 communeId, address[] memory members, uint256 monthStart, uint256 monthEnd)
-        internal
-        view
-        returns (ChoreInstance[] memory completedChores, ChoreInstance[] memory pendingChores)
-    {
-        ChoreSchedule[] memory schedules = choreScheduler.getChoreSchedules(communeId);
-
-        // Calculate max possible instances (rough estimate: schedules * 30 days / min 1 day frequency)
-        uint256 maxInstances = schedules.length * 30;
-
-        // Allocate arrays with max size (will have empty slots at end)
-        completedChores = new ChoreInstance[](maxInstances);
-        pendingChores = new ChoreInstance[](maxInstances);
-
-        uint256 cIdx = 0;
-        uint256 pIdx = 0;
-
-        for (uint256 i = 0; i < schedules.length; i++) {
-            (cIdx, pIdx) = _processSchedule(
-                communeId, schedules[i], members, monthStart, monthEnd, completedChores, pendingChores, cIdx, pIdx
-            );
-        }
-
-        return (completedChores, pendingChores);
-    }
-
-    /// @notice Process a single schedule and generate instances
-    function _processSchedule(
-        uint256 communeId,
-        ChoreSchedule memory schedule,
-        address[] memory members,
-        uint256 monthStart,
-        uint256 monthEnd,
-        ChoreInstance[] memory completedChores,
-        ChoreInstance[] memory pendingChores,
-        uint256 cIdx,
-        uint256 pIdx
-    ) internal view returns (uint256, uint256) {
-        // Skip if schedule starts after the month
-        if (schedule.startTime >= monthEnd) return (cIdx, pIdx);
-
-        uint256 instanceStart = schedule.startTime;
-        if (instanceStart < monthStart) {
-            // Calculate first instance in specified month
-            uint256 periodsSinceStart = (monthStart - schedule.startTime) / schedule.frequency;
-            instanceStart = schedule.startTime + (periodsSinceStart * schedule.frequency);
-        }
-
-        // Generate all instances in this month
-        while (instanceStart < monthEnd) {
-            uint256 period = choreScheduler.getCurrentPeriod(communeId, schedule.id);
-            bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
-            address assignee = choreScheduler.getChoreAssignee(communeId, schedule.id, members);
-
-            if (isComplete) {
-                completedChores[cIdx] = ChoreInstance({
-                    scheduleId: schedule.id,
-                    title: schedule.title,
-                    frequency: schedule.frequency,
-                    periodNumber: period,
-                    periodStart: instanceStart,
-                    periodEnd: instanceStart + schedule.frequency,
-                    assignedTo: assignee,
-                    completed: true
-                });
-                cIdx++;
-            } else {
-                pendingChores[pIdx] = ChoreInstance({
-                    scheduleId: schedule.id,
-                    title: schedule.title,
-                    frequency: schedule.frequency,
-                    periodNumber: period,
-                    periodStart: instanceStart,
-                    periodEnd: instanceStart + schedule.frequency,
-                    assignedTo: assignee,
-                    completed: false
-                });
-                pIdx++;
-            }
-
-            instanceStart += schedule.frequency;
-        }
-
-        return (cIdx, pIdx);
     }
 
     /// @notice Get expenses for specified month only, categorized by status

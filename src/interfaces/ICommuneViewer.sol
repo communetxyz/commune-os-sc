@@ -40,10 +40,14 @@ interface ICommuneViewer {
         view
         returns (Commune memory communeData, address[] memory members, uint256[] memory memberCollaterals);
 
-    function getCommuneChores(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+    function getCommuneChores(uint256 communeId)
         external
         view
-        returns (ChoreInstance[] memory completedChores, ChoreInstance[] memory pendingChores);
+        returns (
+            ChoreSchedule[] memory schedules,
+            uint256[] memory currentPeriods,
+            bool[] memory completionStatus
+        );
 
     function getCommuneExpenses(uint256 communeId, uint256 monthStart, uint256 monthEnd)
         external
