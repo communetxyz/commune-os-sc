@@ -77,9 +77,10 @@ jobs:
       - name: Verify contracts on Etherscan
         env:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        continue-on-error: true
         run: |
           echo "Waiting for Etherscan to index contracts (increased wait due to commune initialization)..."
-          sleep 180
+          sleep 300
 
           # Read collateral token from config
           COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/testnet.json)

@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Commune} from "./ICommuneRegistry.sol";
 import {ChoreSchedule} from "./IChoreScheduler.sol";
-import {Expense} from "./IExpenseManager.sol";
 
 interface ICommuneOS {
     // Errors
@@ -39,9 +37,4 @@ interface ICommuneOS {
         returns (uint256 disputeId);
 
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external;
-
-    function getCommuneStatistics(uint256 communeId)
-        external
-        view
-        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount);
 }
