@@ -54,10 +54,13 @@ contract DeployScript is Script {
                 string memory chorePath = string(abi.encodePacked(".chores[", vm.toString(i), "]"));
                 string memory title = vm.parseJsonString(json, string(abi.encodePacked(chorePath, ".title")));
                 uint256 frequency = vm.parseJsonUint(json, string(abi.encodePacked(chorePath, ".frequency")));
-                string memory description =
-                    vm.parseJsonString(json, string(abi.encodePacked(chorePath, ".description")));
 
-                choreSchedules[i] = ChoreSchedule({title: title, frequency: frequency, description: description});
+                choreSchedules[i] = ChoreSchedule({
+                    id: 0, // Will be set by ChoreScheduler
+                    title: title,
+                    frequency: frequency,
+                    startTime: block.timestamp
+                });
             }
 
             // If collateral required, approve the CollateralManager
