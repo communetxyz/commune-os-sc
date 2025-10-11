@@ -95,6 +95,7 @@ jobs:
             --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "Verifying CommuneRegistry at ${{ steps.deploy.outputs.commune_registry }}"
@@ -105,6 +106,7 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "Verifying MemberRegistry at ${{ steps.deploy.outputs.member_registry }}"
@@ -115,6 +117,7 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "Verifying ChoreScheduler at ${{ steps.deploy.outputs.chore_scheduler }}"
@@ -125,6 +128,7 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "Verifying ExpenseManager at ${{ steps.deploy.outputs.expense_manager }}"
@@ -135,6 +139,7 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "Verifying VotingModule at ${{ steps.deploy.outputs.voting_module }}"
@@ -145,6 +150,7 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "Verifying CollateralManager at ${{ steps.deploy.outputs.collateral_manager }}"
@@ -156,6 +162,7 @@ jobs:
             --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
+            --skip-is-verified-check \
             --watch
 
           echo "All contracts verified successfully!"
