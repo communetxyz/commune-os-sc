@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+      - RonTuretzky/commune-view-function
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
