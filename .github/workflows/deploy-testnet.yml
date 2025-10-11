@@ -92,7 +92,7 @@ jobs:
             --chain-id 17000 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch
+            --watch || true
 
           sleep 10
 
@@ -104,7 +104,7 @@ jobs:
             --chain-id 17000 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch
+            --watch || true
 
           sleep 10
 
@@ -130,7 +130,7 @@ jobs:
               src/$contract.sol:$contract \
               --chain-id 17000 \
               --etherscan-api-key $ETHERSCAN_API_KEY \
-              --watch
+              --watch || true
 
             sleep 10
           done
