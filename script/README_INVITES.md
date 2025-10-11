@@ -4,7 +4,38 @@
 
 The `InviteGenerator` is a Solidity utility contract for generating cryptographic signatures that allow new members to join CommuneOS communes. It uses EIP-191 signature format to create secure, single-use invites.
 
-## Usage
+## Quick Start - Running Locally
+
+Generate invite files directly from the command line:
+
+```bash
+# Generate 5 invites for commune ID 1, starting from nonce 1
+forge script script/InviteGenerator.s.sol:InviteGenerator \
+  -s "run(uint256,uint256,uint256)" \
+  <PRIVATE_KEY> \
+  <COMMUNE_ID> \
+  <START_NONCE>
+
+# Example:
+forge script script/InviteGenerator.s.sol:InviteGenerator \
+  -s "run(uint256,uint256,uint256)" \
+  0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80 \
+  1 \
+  1
+```
+
+This will create files in `./invites/` directory:
+- `1.txt`, `2.txt`, `3.txt`, `4.txt`, `5.txt`
+
+Each file contains:
+- Commune ID
+- Nonce
+- Signature
+- Ready-to-use function call
+
+**Note:** The `invites/` directory is gitignored for security.
+
+## Programmatic Usage
 
 ### Importing the Utility
 
