@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - RonTuretzky/init-commune-deploys
   workflow_dispatch:
 
 jobs:
