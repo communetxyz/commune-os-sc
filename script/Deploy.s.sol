@@ -78,7 +78,7 @@ contract DeployScript is Script {
 
             // Create commune with chores
             uint256 communeId =
-                communeOS.createCommune("Singapore House", collateralRequired, collateralAmount, choreSchedules);
+                communeOS.createCommune("Hackatsuon House", collateralRequired, collateralAmount, choreSchedules);
 
             console.log("Commune created with ID:", communeId);
             console.log("Chore schedules added:", choreCount);
