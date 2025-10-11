@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
-import "./interfaces/ICollateralManager.sol";
-import "./CommuneOSModule.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "./interfaces/ICollateralManager.sol";
+import "./CommuneOSModule.sol";
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
@@ -18,6 +18,9 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @notice Tracks collateral balance for each member
     /// @dev Maps member address => collateral balance in token units
     mapping(address => uint256) public collateralBalance;
+
+    /// @notice Thrown when member has insufficient collateral
+    error InsufficientCollateral();
 
     /// @notice Initializes the CollateralManager with token configuration
     /// @param _collateralToken Address of ERC20 token
@@ -44,11 +47,15 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
-    /// @dev Uses safeTransfer to send ERC20 tokens to recipient
+    /// @dev Uses checks-effects-interactions pattern with SafeERC20 to prevent reentrancy
     function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
-        collateralBalance[member] -= amount; // Will revert if insufficient balance
+        // Checks
+        if (collateralBalance[member] < amount) revert InsufficientCollateral();
 
-        // ERC20 token transfer using SafeERC20
+        // Effects
+        collateralBalance[member] -= amount;
+
+        // Interactions - SafeERC20 automatically reverts on failure
         collateralToken.safeTransfer(recipient, amount);
 
         emit CollateralSlashed(member, amount, recipient);

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {Expense} from "./interfaces/IExpenseManager.sol";
 import "./interfaces/IExpenseManager.sol";
@@ -69,29 +69,15 @@ contract ExpenseManager is CommuneOSModule, IExpenseManager {
     /// @notice Mark an expense as disputed
     /// @param expenseId The expense ID
     /// @param disputeId The dispute ID from VotingModule
+    /// @dev Reverts if expense has already been disputed (one dispute per expense)
     function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external onlyCommuneOS {
         if (expenseId >= expenseCount) revert InvalidExpenseId();
+        if (expenses[expenseId].disputed) revert AlreadyDisputed();
 
         expenses[expenseId].disputed = true;
         expenseDisputes[expenseId] = disputeId;
 
         emit ExpenseDisputed(expenseId, disputeId);
-    }
-
-    /// @notice Reassign an expense to a new member (after dispute resolution)
-    /// @param expenseId The expense ID
-    /// @param newAssignee The new assignee
-    /// @dev Resets the paid status to false when reassigning
-    function reassignExpense(uint256 expenseId, address newAssignee) external onlyCommuneOS {
-        if (expenseId >= expenseCount) revert InvalidExpenseId();
-        if (newAssignee == address(0)) revert InvalidAssignee();
-
-        address oldAssignee = expenses[expenseId].assignedTo;
-
-        expenses[expenseId].assignedTo = newAssignee;
-        expenses[expenseId].paid = false; // Reset paid status
-
-        emit ExpenseReassigned(expenseId, oldAssignee, newAssignee);
     }
 
     /// @notice Check if an expense is paid
