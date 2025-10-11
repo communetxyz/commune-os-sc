@@ -79,8 +79,8 @@ jobs:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
         run: |
           # Wait for Etherscan to index the deployments
-          echo "Waiting 3 minutes for Etherscan to index deployments..."
-          sleep 180
+          echo "Waiting 5 minutes for Etherscan to index deployments..."
+          sleep 300
 
           # Get compiler version
           COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
@@ -94,7 +94,8 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "Verifying CommuneRegistry at ${{ steps.deploy.outputs.commune_registry }}"
           forge verify-contract \
@@ -103,7 +104,8 @@ jobs:
             --chain-id 17000 \
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "Verifying MemberRegistry at ${{ steps.deploy.outputs.member_registry }}"
           forge verify-contract \
@@ -112,7 +114,8 @@ jobs:
             --chain-id 17000 \
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "Verifying ChoreScheduler at ${{ steps.deploy.outputs.chore_scheduler }}"
           forge verify-contract \
@@ -121,7 +124,8 @@ jobs:
             --chain-id 17000 \
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "Verifying ExpenseManager at ${{ steps.deploy.outputs.expense_manager }}"
           forge verify-contract \
@@ -130,7 +134,8 @@ jobs:
             --chain-id 17000 \
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "Verifying VotingModule at ${{ steps.deploy.outputs.voting_module }}"
           forge verify-contract \
@@ -139,7 +144,8 @@ jobs:
             --chain-id 17000 \
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "Verifying CollateralManager at ${{ steps.deploy.outputs.collateral_manager }}"
           forge verify-contract \
@@ -149,7 +155,8 @@ jobs:
             --compiler-version "v${COMPILER_VERSION}" \
             --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
-            --etherscan-api-key $ETHERSCAN_API_KEY
+            --etherscan-api-key $ETHERSCAN_API_KEY \
+            --watch
 
           echo "All contracts verified successfully!"
 
