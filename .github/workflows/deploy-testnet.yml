@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - dev
+  pull_request:
+    branches:
+      - dev
   workflow_dispatch:
 
 jobs:
@@ -74,9 +77,10 @@ jobs:
       - name: Verify contracts on Etherscan
         env:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        continue-on-error: true
         run: |
-          echo "Waiting for Etherscan to index contracts..."
-          sleep 30
+          echo "Waiting for Etherscan to index contracts (increased wait due to commune initialization)..."
+          sleep 300
 
           # Read collateral token from config
           COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/testnet.json)
@@ -89,7 +93,7 @@ jobs:
             --chain-id 17000 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch || true
+            --watch
 
           sleep 10
 
@@ -101,16 +105,13 @@ jobs:
             --chain-id 17000 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch || true
+            --watch
 
           sleep 10
 
           # Verify module contracts (no constructor args)
           for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "ExpenseManager" "VotingModule"; do
             echo "Verifying $contract..."
-
-            # Get the address variable name (lowercase with underscores)
-            ADDRESS_VAR=$(echo $contract | sed 's/\([A-Z]\)/_\L\1/g' | sed 's/^_//')
 
             # Get the address from outputs
             if [ "$contract" = "CommuneRegistry" ]; then
@@ -130,7 +131,7 @@ jobs:
               src/$contract.sol:$contract \
               --chain-id 17000 \
               --etherscan-api-key $ETHERSCAN_API_KEY \
-              --watch || true
+              --watch
 
             sleep 10
           done
