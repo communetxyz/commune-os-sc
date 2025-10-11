@@ -1,5 +1,38 @@
 {
   "network": "holesky",
   "chainId": 17000,
-  "collateralToken": "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034"
+  "collateralToken": "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
+  "collateralAmount": "5",
+  "chores": [
+    {
+      "title": "washing the dishes (soaping)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "washing the dishes (washing)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "washing the dishes (drying)",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "tidying up the shower room and laundry area",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "cleaning the upstairs food area",
+      "frequency": 86400,
+      "description": "daily"
+    },
+    {
+      "title": "cleaning the tables and floor after dinner",
+      "frequency": 86400,
+      "description": "every day"
+    }
+  ]
 }
