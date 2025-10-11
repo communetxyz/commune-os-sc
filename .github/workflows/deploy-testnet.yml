@@ -81,6 +81,9 @@ jobs:
           echo "Waiting for Etherscan to index contracts..."
           sleep 30
 
+          # Get the exact compiler version metadata from the compiled artifact
+          COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
+
           # Read collateral token from config
           COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/testnet.json)
 
@@ -90,6 +93,8 @@ jobs:
             ${{ steps.deploy.outputs.commune_os }} \
             src/CommuneOS.sol:CommuneOS \
             --chain-id 17000 \
+            --compiler-version "v${COMPILER_VERSION}" \
+            --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
             --watch || true
@@ -102,6 +107,8 @@ jobs:
             ${{ steps.deploy.outputs.collateral_manager }} \
             src/CollateralManager.sol:CollateralManager \
             --chain-id 17000 \
+            --compiler-version "v${COMPILER_VERSION}" \
+            --num-of-optimizations 200 \
             --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
             --etherscan-api-key $ETHERSCAN_API_KEY \
             --watch || true
@@ -111,9 +118,6 @@ jobs:
           # Verify module contracts (no constructor args)
           for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "ExpenseManager" "VotingModule"; do
             echo "Verifying $contract..."
-
-            # Get the address variable name (lowercase with underscores)
-            ADDRESS_VAR=$(echo $contract | sed 's/\([A-Z]\)/_\L\1/g' | sed 's/^_//')
 
             # Get the address from outputs
             if [ "$contract" = "CommuneRegistry" ]; then
@@ -132,6 +136,8 @@ jobs:
               $ADDRESS \
               src/$contract.sol:$contract \
               --chain-id 17000 \
+              --compiler-version "v${COMPILER_VERSION}" \
+              --num-of-optimizations 200 \
               --etherscan-api-key $ETHERSCAN_API_KEY \
               --watch || true
 
