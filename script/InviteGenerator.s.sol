@@ -49,12 +49,24 @@ contract InviteGenerator is Script {
 
         // Create file content with invite details
         string memory content = string.concat(
-            "Commune ID: ", vm.toString(communeId), "\n",
-            "Nonce: ", vm.toString(nonce), "\n",
-            "Signature: 0x", _bytesToHexString(signature), "\n",
+            "Commune ID: ",
+            vm.toString(communeId),
+            "\n",
+            "Nonce: ",
+            vm.toString(nonce),
+            "\n",
+            "Signature: 0x",
+            _bytesToHexString(signature),
+            "\n",
             "\n",
             "To use this invite, call:\n",
-            "communeOS.joinCommune(", vm.toString(communeId), ", ", vm.toString(nonce), ", 0x", _bytesToHexString(signature), ")\n"
+            "communeOS.joinCommune(",
+            vm.toString(communeId),
+            ", ",
+            vm.toString(nonce),
+            ", 0x",
+            _bytesToHexString(signature),
+            ")\n"
         );
 
         // Write to file named <nonce>.txt
