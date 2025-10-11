@@ -45,11 +45,14 @@ jobs:
         env:
           PRIVATE_KEY: ${{ secrets.TESTNET_PRIVATE_KEY }}
           HOLESKY_RPC_URL: ${{ secrets.HOLESKY_RPC_URL }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
           CONFIG_PATH: config/testnet.json
         run: |
           DEPLOY_OUTPUT=$(forge script script/Deploy.s.sol:DeployScript \
             --rpc-url $HOLESKY_RPC_URL \
             --broadcast \
+            --verify \
+            --etherscan-api-key $ETHERSCAN_API_KEY \
             --slow \
             -vvvv)
 
@@ -73,78 +76,7 @@ jobs:
           echo "collateral_manager=$COLLATERAL_MANAGER" >> $GITHUB_OUTPUT
 
           echo "Deployed CommuneOS to: $COMMUNE_OS"
-
-      - name: Verify contracts on Etherscan
-        env:
-          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
-        run: |
-          echo "Waiting for Etherscan to index contracts..."
-          sleep 30
-
-          # Get the exact compiler version metadata from the compiled artifact
-          COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
-
-          # Read collateral token from config
-          COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/testnet.json)
-
-          # Verify CommuneOS (main contract)
-          echo "Verifying CommuneOS..."
-          forge verify-contract \
-            ${{ steps.deploy.outputs.commune_os }} \
-            src/CommuneOS.sol:CommuneOS \
-            --chain-id 17000 \
-            --compiler-version "v${COMPILER_VERSION}" \
-            --num-of-optimizations 200 \
-            --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
-            --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch
-
-          sleep 10
-
-          # Verify CollateralManager
-          echo "Verifying CollateralManager..."
-          forge verify-contract \
-            ${{ steps.deploy.outputs.collateral_manager }} \
-            src/CollateralManager.sol:CollateralManager \
-            --chain-id 17000 \
-            --compiler-version "v${COMPILER_VERSION}" \
-            --num-of-optimizations 200 \
-            --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
-            --etherscan-api-key $ETHERSCAN_API_KEY \
-            --watch
-
-          sleep 10
-
-          # Verify module contracts (no constructor args)
-          for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "ExpenseManager" "VotingModule"; do
-            echo "Verifying $contract..."
-
-            # Get the address from outputs
-            if [ "$contract" = "CommuneRegistry" ]; then
-              ADDRESS="${{ steps.deploy.outputs.commune_registry }}"
-            elif [ "$contract" = "MemberRegistry" ]; then
-              ADDRESS="${{ steps.deploy.outputs.member_registry }}"
-            elif [ "$contract" = "ChoreScheduler" ]; then
-              ADDRESS="${{ steps.deploy.outputs.chore_scheduler }}"
-            elif [ "$contract" = "ExpenseManager" ]; then
-              ADDRESS="${{ steps.deploy.outputs.expense_manager }}"
-            elif [ "$contract" = "VotingModule" ]; then
-              ADDRESS="${{ steps.deploy.outputs.voting_module }}"
-            fi
-
-            forge verify-contract \
-              $ADDRESS \
-              src/$contract.sol:$contract \
-              --chain-id 17000 \
-              --compiler-version "v${COMPILER_VERSION}" \
-              --num-of-optimizations 200 \
-              --etherscan-api-key $ETHERSCAN_API_KEY \
-              --watch
-
-            sleep 10
-          done
-
-          echo "Contract verification complete!"
+          echo "Note: Contracts are verified automatically during deployment with --verify flag"
 
       - name: Create deployment summary
         run: |
