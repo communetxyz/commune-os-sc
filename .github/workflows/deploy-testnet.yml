@@ -79,8 +79,8 @@ jobs:
           ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
         run: |
           # Wait for Etherscan to index the deployments
-          echo "Waiting 60 seconds for Etherscan to index deployments..."
-          sleep 60
+          echo "Waiting 3 minutes for Etherscan to index deployments..."
+          sleep 180
 
           # Get compiler version
           COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
