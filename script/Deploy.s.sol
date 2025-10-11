@@ -54,10 +54,13 @@ contract DeployScript is Script {
                 string memory chorePath = string(abi.encodePacked(".chores[", vm.toString(i), "]"));
                 string memory title = vm.parseJsonString(json, string(abi.encodePacked(chorePath, ".title")));
                 uint256 frequency = vm.parseJsonUint(json, string(abi.encodePacked(chorePath, ".frequency")));
-                string memory description =
-                    vm.parseJsonString(json, string(abi.encodePacked(chorePath, ".description")));
+                string memory description = vm.parseJsonString(json, string(abi.encodePacked(chorePath, ".description")));
 
-                choreSchedules[i] = ChoreSchedule({title: title, frequency: frequency, description: description});
+                choreSchedules[i] = ChoreSchedule({
+                    title: title,
+                    frequency: frequency,
+                    description: description
+                });
             }
 
             // If collateral required, approve the CollateralManager
@@ -68,8 +71,12 @@ contract DeployScript is Script {
             }
 
             // Create commune with chores
-            uint256 communeId =
-                communeOS.createCommune("Singapore House", collateralRequired, collateralAmount, choreSchedules);
+            uint256 communeId = communeOS.createCommune(
+                "Singapore House",
+                collateralRequired,
+                collateralAmount,
+                choreSchedules
+            );
 
             console.log("Commune created with ID:", communeId);
             console.log("Chore schedules added:", choreCount);
