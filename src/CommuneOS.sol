@@ -194,4 +194,28 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
             );
         }
     }
+
+    /// @notice Set an assignee override for a specific chore
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID
+    /// @param assignee The member to assign (address(0) to use rotation)
+    /// @dev Caller must be a member of the commune
+    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external onlyMember(communeId) {
+        choreScheduler.setChoreAssignee(communeId, choreId, assignee);
+    }
+
+    /// @notice Remove a member from a commune
+    /// @param communeId The commune ID
+    /// @param memberAddress Address of the member to remove
+    /// @dev Caller must be a member of the commune. Withdraws all collateral and clears assignments.
+    function removeMember(uint256 communeId, address memberAddress) external onlyMember(communeId) {
+        // Withdraw all collateral (if any exists)
+        collateralManager.withdrawCollateral(memberAddress);
+
+        // Clear any chore assignments for this member
+        choreScheduler.clearMemberAssignments(communeId, memberAddress);
+
+        // Remove member from registry
+        memberRegistry.removeMember(communeId, memberAddress);
+    }
 }

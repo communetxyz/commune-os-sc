@@ -58,4 +58,6 @@ interface IChoreScheduler {
         external
         pure
         returns (uint256);
+
+    function clearMemberAssignments(uint256 communeId, address memberAddress) external;
 }

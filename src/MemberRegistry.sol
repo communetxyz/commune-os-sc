@@ -156,6 +156,31 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
         return usedNonces[communeId][nonce];
     }
 
+    /// @notice Removes a member from a commune
+    /// @param communeId ID of the commune
+    /// @param memberAddress Address of the member to remove
+    /// @dev Uses swap-and-pop to efficiently remove from array
+    function removeMember(uint256 communeId, address memberAddress) external onlyCommuneOS {
+        if (memberAddress == address(0)) revert InvalidAddress();
+        if (memberCommuneId[memberAddress] != communeId || communeId == 0) revert NotAMember();
+
+        // Find and remove the member from the array using swap-and-pop
+        Member[] storage members = communeMembers[communeId];
+        for (uint256 i = 0; i < members.length; i++) {
+            if (members[i].walletAddress == memberAddress) {
+                // Swap with last element and pop
+                members[i] = members[members.length - 1];
+                members.pop();
+                break;
+            }
+        }
+
+        // Remove from memberCommuneId mapping
+        memberCommuneId[memberAddress] = 0;
+
+        emit MemberRemoved(memberAddress, communeId, block.timestamp);
+    }
+
     // Internal signature verification helpers
 
     /// @notice Generates message hash from communeId and nonce
