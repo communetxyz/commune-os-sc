@@ -181,12 +181,13 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @notice Clear all chore assignments for a specific member
     /// @param communeId The commune ID
     /// @param memberAddress The member whose assignments should be cleared
-    /// @dev Iterates through all chores and clears overrides where member is assigned
+    /// @dev Iterates through all chores and clears overrides for current period where member is assigned
     function clearMemberAssignments(uint256 communeId, address memberAddress) external onlyCommuneOS {
         ChoreSchedule[] storage schedules = choreSchedules[communeId];
         for (uint256 i = 0; i < schedules.length; i++) {
-            if (choreAssigneeOverrides[communeId][i] == memberAddress) {
-                choreAssigneeOverrides[communeId][i] = address(0);
+            uint256 currentPeriod = getCurrentPeriod(communeId, i);
+            if (choreAssigneeOverrides[communeId][i][currentPeriod] == memberAddress) {
+                choreAssigneeOverrides[communeId][i][currentPeriod] = address(0);
                 emit ChoreAssigneeSet(communeId, i, address(0));
             }
         }

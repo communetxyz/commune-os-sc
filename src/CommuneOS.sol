@@ -195,13 +195,17 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         }
     }
 
-    /// @notice Set an assignee override for a specific chore
+    /// @notice Set an assignee override for a specific chore period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @param period The period number
     /// @param assignee The member to assign (address(0) to use rotation)
     /// @dev Caller must be a member of the commune
-    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external onlyMember(communeId) {
-        choreScheduler.setChoreAssignee(communeId, choreId, assignee);
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee)
+        external
+        onlyMember(communeId)
+    {
+        choreScheduler.setChoreAssignee(communeId, choreId, period, assignee);
     }
 
     /// @notice Remove a member from a commune

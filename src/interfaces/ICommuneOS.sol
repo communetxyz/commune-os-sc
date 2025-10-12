@@ -40,5 +40,5 @@ interface ICommuneOS {
 
     function removeMember(uint256 communeId, address memberAddress) external;
 
-    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external;
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 }

@@ -399,9 +399,10 @@ contract CommuneOSTest is Test {
         communeOS.joinCommune(communeId, nonce, signature);
         vm.stopPrank();
 
-        // Assign chore to member1
+        // Assign chore to member1 for current period
+        uint256 currentPeriod = communeOS.choreScheduler().getCurrentPeriod(communeId, 0);
         vm.prank(creator);
-        communeOS.setChoreAssignee(communeId, 0, member1);
+        communeOS.setChoreAssignee(communeId, 0, currentPeriod, member1);
 
         // Get members list for checking assignment
         address[] memory members = communeOS.memberRegistry().getCommuneMembers(communeId);
