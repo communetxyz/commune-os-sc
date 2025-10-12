@@ -166,7 +166,16 @@ abstract contract CommuneViewer {
                 // Calculate period for this specific instance, not current time
                 uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
                 bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
-                address assignee = choreScheduler.getChoreAssignee(communeId, schedule.id, members);
+
+                // Calculate assignee for this specific period
+                address assignee;
+                address override_ = choreScheduler.choreAssigneeOverrides(communeId, schedule.id);
+                if (override_ != address(0)) {
+                    assignee = override_;
+                } else {
+                    uint256 memberIndex = (schedule.id + period) % members.length;
+                    assignee = members[memberIndex];
+                }
 
                 instances[instanceCount] = ChoreInstance({
                     scheduleId: schedule.id,
