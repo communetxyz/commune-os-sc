@@ -1,6 +1,7 @@
 {
   "network": "holesky",
   "chainId": 17000,
+  "frontendUrl": "https://www.share-house.fun",
   "collateralToken": "0x3F1c547b21f65e10480dE3ad8E19fAAC46C95034",
   "collateralAmount": "5",
   "chores": [
