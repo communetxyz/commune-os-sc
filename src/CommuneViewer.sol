@@ -177,9 +177,6 @@ abstract contract CommuneViewer {
         while (instanceStart < endDate) {
             uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
 
-            // Check for period-specific override assignee
-            address overrideAssignee = choreScheduler.choreAssigneeOverrides(communeId, schedule.id, period);
-
             instances[count++] = ChoreInstance({
                 scheduleId: schedule.id,
                 title: schedule.title,
@@ -187,9 +184,7 @@ abstract contract CommuneViewer {
                 periodNumber: period,
                 periodStart: instanceStart,
                 periodEnd: instanceStart + schedule.frequency,
-                assignedTo: overrideAssignee != address(0)
-                    ? overrideAssignee
-                    : members[(schedule.id + period) % members.length],
+                assignedTo: choreScheduler.getChoreAssigneeForPeriod(communeId, schedule.id, period, members),
                 completed: choreScheduler.isChoreComplete(communeId, schedule.id, period)
             });
 
