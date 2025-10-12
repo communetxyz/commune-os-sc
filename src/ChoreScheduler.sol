@@ -112,8 +112,9 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         completed = new bool[](count);
 
         for (uint256 i = 0; i < count; i++) {
-            periods[i] = getCurrentPeriod(communeId, i);
-            completed[i] = completions[communeId][i][periods[i]];
+            uint256 choreId = schedules[i].id;
+            periods[i] = getCurrentPeriod(communeId, choreId);
+            completed[i] = completions[communeId][choreId][periods[i]];
         }
 
         return (schedules, periods, completed);
