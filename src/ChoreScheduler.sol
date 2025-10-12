@@ -124,7 +124,10 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @param period The period number
     /// @param assignee The member to assign (address(0) to use rotation)
-    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external onlyCommuneOS {
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee)
+        external
+        onlyCommuneOS
+    {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
         choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
