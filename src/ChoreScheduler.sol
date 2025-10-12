@@ -168,12 +168,11 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param members Array of commune members
     /// @return address The assigned member for that period
     /// @dev Returns override assignee if set for the period, otherwise uses rotation
-    function getChoreAssigneeForPeriod(
-        uint256 communeId,
-        uint256 choreId,
-        uint256 period,
-        address[] memory members
-    ) external view returns (address) {
+    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
+        external
+        view
+        returns (address)
+    {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         // Check if there's an override for this period
