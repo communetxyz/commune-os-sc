@@ -132,73 +132,70 @@ abstract contract CommuneViewer {
         view
         returns (uint256 communeId, ChoreInstance[] memory instances)
     {
-        // Get the commune this user belongs to
         communeId = memberRegistry.memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
         ChoreSchedule[] memory schedules = choreScheduler.getChoreSchedules(communeId);
         address[] memory members = memberRegistry.getCommuneMembers(communeId);
 
-        // Estimate max instances (schedules * days in range / 1 day min frequency)
         uint256 daysInRange = (endDate - startDate) / 1 days + 1;
-        uint256 maxInstances = schedules.length * daysInRange;
-        instances = new ChoreInstance[](maxInstances);
+        ChoreInstance[] memory tempInstances = new ChoreInstance[](schedules.length * daysInRange);
+        uint256 count = 0;
 
-        uint256 instanceCount = 0;
-
-        // Generate instances for each schedule
         for (uint256 i = 0; i < schedules.length; i++) {
-            ChoreSchedule memory schedule = schedules[i];
-
-            // Skip if schedule hasn't started yet or started after the range
-            if (schedule.startTime >= endDate) continue;
-
-            // Calculate first instance in the range
-            uint256 instanceStart = schedule.startTime;
-            if (instanceStart < startDate) {
-                uint256 periodsSinceStart = (startDate - schedule.startTime) / schedule.frequency;
-                instanceStart = schedule.startTime + (periodsSinceStart * schedule.frequency);
-            }
-
-            // Generate all instances in the date range
-            while (instanceStart < endDate) {
-                uint256 periodEnd = instanceStart + schedule.frequency;
-                // Calculate period for this specific instance, not current time
-                uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
-                bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
-
-                // Calculate assignee for this specific period
-                address assignee;
-                address override_ = choreScheduler.choreAssigneeOverrides(communeId, schedule.id);
-                if (override_ != address(0)) {
-                    assignee = override_;
-                } else {
-                    uint256 memberIndex = (schedule.id + period) % members.length;
-                    assignee = members[memberIndex];
-                }
-
-                instances[instanceCount] = ChoreInstance({
-                    scheduleId: schedule.id,
-                    title: schedule.title,
-                    frequency: schedule.frequency,
-                    periodNumber: period,
-                    periodStart: instanceStart,
-                    periodEnd: periodEnd,
-                    assignedTo: assignee,
-                    completed: isComplete
-                });
-
-                instanceCount++;
-                instanceStart += schedule.frequency;
-            }
+            count = _generateChoreInstances(
+                communeId, schedules[i], members, startDate, endDate, tempInstances, count
+            );
         }
 
-        // Trim array to actual size
-        ChoreInstance[] memory trimmedInstances = new ChoreInstance[](instanceCount);
-        for (uint256 i = 0; i < instanceCount; i++) {
-            trimmedInstances[i] = instances[i];
+        // Trim to actual size
+        instances = new ChoreInstance[](count);
+        for (uint256 i = 0; i < count; i++) {
+            instances[i] = tempInstances[i];
         }
-        instances = trimmedInstances;
+    }
+
+    /// @notice Helper to generate chore instances for a single schedule
+    function _generateChoreInstances(
+        uint256 communeId,
+        ChoreSchedule memory schedule,
+        address[] memory members,
+        uint256 startDate,
+        uint256 endDate,
+        ChoreInstance[] memory instances,
+        uint256 startIndex
+    ) private view returns (uint256) {
+        if (schedule.startTime >= endDate) return startIndex;
+
+        address overrideAssignee = choreScheduler.choreAssigneeOverrides(communeId, schedule.id);
+
+        uint256 instanceStart = schedule.startTime;
+        if (instanceStart < startDate) {
+            instanceStart = schedule.startTime +
+                ((startDate - schedule.startTime) / schedule.frequency) * schedule.frequency;
+        }
+
+        uint256 count = startIndex;
+        while (instanceStart < endDate) {
+            uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
+
+            instances[count++] = ChoreInstance({
+                scheduleId: schedule.id,
+                title: schedule.title,
+                frequency: schedule.frequency,
+                periodNumber: period,
+                periodStart: instanceStart,
+                periodEnd: instanceStart + schedule.frequency,
+                assignedTo: overrideAssignee != address(0)
+                    ? overrideAssignee
+                    : members[(schedule.id + period) % members.length],
+                completed: choreScheduler.isChoreComplete(communeId, schedule.id, period)
+            });
+
+            instanceStart += schedule.frequency;
+        }
+
+        return count;
     }
 
     /// @notice Get expenses for a specific month, categorized by status for a user's commune
