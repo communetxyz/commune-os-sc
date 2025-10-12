@@ -163,7 +163,8 @@ abstract contract CommuneViewer {
             // Generate all instances in the date range
             while (instanceStart < endDate) {
                 uint256 periodEnd = instanceStart + schedule.frequency;
-                uint256 period = choreScheduler.getCurrentPeriod(communeId, schedule.id);
+                // Calculate period for this specific instance, not current time
+                uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
                 bool isComplete = choreScheduler.isChoreComplete(communeId, schedule.id, period);
                 address assignee = choreScheduler.getChoreAssignee(communeId, schedule.id, members);
 
