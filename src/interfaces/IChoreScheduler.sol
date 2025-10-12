@@ -47,7 +47,7 @@ interface IChoreScheduler {
         view
         returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed);
 
-    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external;
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 
     function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
         external
