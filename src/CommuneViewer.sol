@@ -138,6 +138,8 @@ abstract contract CommuneViewer {
         ChoreSchedule[] memory schedules = choreScheduler.getChoreSchedules(communeId);
         address[] memory members = memberRegistry.getCommuneMembers(communeId);
 
+        // Calculate max possible instances: +1 to cover both start and end dates inclusively
+        // This is just an upper bound estimate; the actual array is trimmed to size later
         uint256 daysInRange = (endDate - startDate) / 1 days + 1;
         ChoreInstance[] memory tempInstances = new ChoreInstance[](schedules.length * daysInRange);
         uint256 count = 0;
