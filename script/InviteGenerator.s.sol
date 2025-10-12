@@ -10,6 +10,9 @@ contract InviteGenerator is Script {
     /// @notice Directory where invite files will be saved
     string public constant INVITES_DIR = "./invites/";
 
+    /// @notice Default frontend URL (gnosis config)
+    string public constant DEFAULT_FRONTEND_URL = "https://www.share-house.fun";
+
     /// @notice Generates an invite signature for a commune
     /// @param privateKey The creator's private key
     /// @param communeId The commune ID to generate invite for
@@ -93,7 +96,7 @@ contract InviteGenerator is Script {
         return signatures;
     }
 
-    /// @notice Batch generates multiple invites and saves them to files
+    /// @notice Batch generates multiple invites and saves them to a single file as URLs
     /// @param privateKey The creator's private key
     /// @param communeId The commune ID to generate invites for
     /// @param nonces Array of unique nonces for the invites
@@ -102,10 +105,42 @@ contract InviteGenerator is Script {
         public
         returns (bytes[] memory signatures)
     {
-        signatures = new bytes[](nonces.length);
-        for (uint256 i = 0; i < nonces.length; i++) {
-            signatures[i] = generateAndSaveInvite(privateKey, communeId, nonces[i]);
+        // Try to read frontend URL from config, fallback to default
+        string memory frontendUrl;
+        try vm.readFile("./config/gnosis.json") returns (string memory configJson) {
+            frontendUrl = _extractFrontendUrl(configJson);
+            if (bytes(frontendUrl).length == 0) {
+                frontendUrl = DEFAULT_FRONTEND_URL;
+            }
+        } catch {
+            frontendUrl = DEFAULT_FRONTEND_URL;
         }
+
+        signatures = new bytes[](nonces.length);
+        string memory allInvites = "";
+
+        for (uint256 i = 0; i < nonces.length; i++) {
+            signatures[i] = generateInvite(privateKey, communeId, nonces[i]);
+
+            // Build URL in format: https://www.share-house.fun/join?communeId=1&nonce=16&signature=0x...
+            string memory inviteUrl = string.concat(
+                frontendUrl,
+                "/join?communeId=",
+                vm.toString(communeId),
+                "&nonce=",
+                vm.toString(nonces[i]),
+                "&signature=0x",
+                _bytesToHexString(signatures[i]),
+                "\n"
+            );
+
+            allInvites = string.concat(allInvites, inviteUrl);
+        }
+
+        // Write all invites to a single file
+        string memory filename = string.concat(INVITES_DIR, "invites.txt");
+        vm.writeFile(filename, allInvites);
+
         return signatures;
     }
 
@@ -129,6 +164,56 @@ contract InviteGenerator is Script {
         }
 
         return string(result);
+    }
+
+    /// @notice Helper to extract frontendUrl from JSON config
+    /// @param json The JSON string to parse
+    /// @return url The extracted frontend URL, or empty string if not found
+    function _extractFrontendUrl(string memory json) internal pure returns (string memory) {
+        bytes memory jsonBytes = bytes(json);
+        bytes memory searchKey = bytes('"frontendUrl":');
+
+        // Find the frontendUrl key
+        for (uint256 i = 0; i < jsonBytes.length - searchKey.length; i++) {
+            bool found = true;
+            for (uint256 j = 0; j < searchKey.length; j++) {
+                if (jsonBytes[i + j] != searchKey[j]) {
+                    found = false;
+                    break;
+                }
+            }
+
+            if (found) {
+                // Skip whitespace and find the opening quote
+                uint256 start = i + searchKey.length;
+                while (
+                    start < jsonBytes.length
+                        && (jsonBytes[start] == " " || jsonBytes[start] == "\t" || jsonBytes[start] == "\n")
+                ) {
+                    start++;
+                }
+
+                if (start < jsonBytes.length && jsonBytes[start] == '"') {
+                    start++; // Skip opening quote
+
+                    // Find closing quote
+                    uint256 end = start;
+                    while (end < jsonBytes.length && jsonBytes[end] != '"') {
+                        end++;
+                    }
+
+                    // Extract the URL
+                    bytes memory urlBytes = new bytes(end - start);
+                    for (uint256 k = 0; k < end - start; k++) {
+                        urlBytes[k] = jsonBytes[start + k];
+                    }
+
+                    return string(urlBytes);
+                }
+            }
+        }
+
+        return "";
     }
 
     /// @notice Example script to run locally - generates invites for a commune
