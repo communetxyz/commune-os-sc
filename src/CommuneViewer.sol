@@ -165,8 +165,6 @@ abstract contract CommuneViewer {
     ) private view returns (uint256) {
         if (schedule.startTime >= endDate) return startIndex;
 
-        address overrideAssignee = choreScheduler.choreAssigneeOverrides(communeId, schedule.id);
-
         uint256 instanceStart = schedule.startTime;
         if (instanceStart < startDate) {
             instanceStart =
@@ -176,6 +174,9 @@ abstract contract CommuneViewer {
         uint256 count = startIndex;
         while (instanceStart < endDate) {
             uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
+
+            // Check for period-specific override assignee
+            address overrideAssignee = choreScheduler.choreAssigneeOverrides(communeId, schedule.id, period);
 
             instances[count++] = ChoreInstance({
                 scheduleId: schedule.id,
