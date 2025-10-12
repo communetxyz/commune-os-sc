@@ -185,7 +185,7 @@ contract InviteGeneratorTest is Test {
     }
 
     /// @notice Test getAddressFromPrivateKey helper
-    function testGetAddressFromPrivateKey() public {
+    function testGetAddressFromPrivateKey() public view {
         address derivedAddress = inviteGenerator.getAddressFromPrivateKey(creatorPrivateKey);
         assertEq(derivedAddress, creator, "Derived address should match creator");
 
@@ -248,7 +248,7 @@ contract InviteGeneratorTest is Test {
     }
 
     /// @notice Test that the message hash format matches CommuneRegistry
-    function testMessageHashFormat() public {
+    function testMessageHashFormat() public view {
         uint256 communeId = 123;
         uint256 nonce = 456;
 

@@ -162,13 +162,12 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     }
 
     /// @notice Calculate which member index is assigned to a chore in a given period
-    /// @param communeId The commune ID
     /// @param choreId The chore ID
     /// @param period The period number
     /// @param memberCount Total number of members
     /// @return uint256 The index of the assigned member (rotation)
     /// @dev Uses formula: (choreId + period) % memberCount for deterministic rotation
-    function getAssignedMemberIndex(uint256 communeId, uint256 choreId, uint256 period, uint256 memberCount)
+    function getAssignedMemberIndex(uint256 choreId, uint256 period, uint256 memberCount)
         external
         pure
         returns (uint256)
