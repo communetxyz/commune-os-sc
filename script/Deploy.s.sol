@@ -27,8 +27,6 @@ contract DeployScript is Script {
             choresJson = string(choresData);
         } catch {}
 
-        address deployer = vm.addr(deployerPrivateKey);
-
         vm.startBroadcast(deployerPrivateKey);
 
         // Deploy CommuneOS

@@ -205,9 +205,9 @@ contract CommuneOSTest is Test {
         vm.stopPrank();
 
         // Add members with collateral
-        _addMemberWithCollateral(creator, communeId, member1, 1);
-        _addMemberWithCollateral(creator, communeId, member2, 2);
-        _addMemberWithCollateral(creator, communeId, member3, 3);
+        _addMemberWithCollateral(communeId, member1, 1);
+        _addMemberWithCollateral(communeId, member2, 2);
+        _addMemberWithCollateral(communeId, member3, 3);
 
         // Create expense assigned to member1
         vm.startPrank(creator);
@@ -300,7 +300,7 @@ contract CommuneOSTest is Test {
     }
 
     // Helper function to add members with collateral
-    function _addMemberWithCollateral(address _creator, uint256 communeId, address member, uint256 nonce) internal {
+    function _addMemberWithCollateral(uint256 communeId, address member, uint256 nonce) internal {
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
         bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
