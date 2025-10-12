@@ -186,7 +186,10 @@ contract InviteGenerator is Script {
             if (found) {
                 // Skip whitespace and find the opening quote
                 uint256 start = i + searchKey.length;
-                while (start < jsonBytes.length && (jsonBytes[start] == ' ' || jsonBytes[start] == '\t' || jsonBytes[start] == '\n')) {
+                while (
+                    start < jsonBytes.length
+                        && (jsonBytes[start] == " " || jsonBytes[start] == "\t" || jsonBytes[start] == "\n")
+                ) {
                     start++;
                 }
 
