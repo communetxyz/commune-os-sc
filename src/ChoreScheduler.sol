@@ -17,9 +17,9 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @dev Maps commune ID => chore ID => period number => completion status (true/false)
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
 
-    /// @notice Stores manual assignee overrides for specific chores
-    /// @dev Maps commune ID => chore ID => assignee address (address(0) means use rotation)
-    mapping(uint256 => mapping(uint256 => address)) public choreAssigneeOverrides;
+    /// @notice Stores manual assignee overrides for specific chores per period
+    /// @dev Maps commune ID => chore ID => period number => assignee address (address(0) means use rotation)
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => address))) public choreAssigneeOverrides;
 
     /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID
@@ -119,13 +119,14 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         return (schedules, periods, completed);
     }
 
-    /// @notice Set an override assignee for a specific chore
+    /// @notice Set an override assignee for a specific chore period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @param period The period number
     /// @param assignee The member to assign (address(0) to use rotation)
-    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external onlyCommuneOS {
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
-        choreAssigneeOverrides[communeId][choreId] = assignee;
+        choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }
 
@@ -134,7 +135,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @param members Array of commune members
     /// @return address The assigned member
-    /// @dev Returns override assignee if set, otherwise uses rotation based on (choreId + period) % memberCount
+    /// @dev Returns override assignee if set for current period, otherwise uses rotation based on (choreId + period) % memberCount
     function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
         external
         view
@@ -142,15 +143,17 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
-        // Check if there's an override
-        address override_ = choreAssigneeOverrides[communeId][choreId];
+        // Get current period
+        uint256 period = getCurrentPeriod(communeId, choreId);
+
+        // Check if there's an override for this period
+        address override_ = choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
             return override_;
         }
 
         // Use rotation based on current period
         if (members.length == 0) revert NoMembers();
-        uint256 period = getCurrentPeriod(communeId, choreId);
         uint256 memberIndex = (choreId + period) % members.length;
         return members[memberIndex];
     }
