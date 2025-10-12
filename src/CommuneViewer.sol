@@ -166,6 +166,8 @@ abstract contract CommuneViewer {
         if (schedule.startTime >= endDate) return startIndex;
 
         uint256 instanceStart = schedule.startTime;
+        // If schedule started before the requested range, fast-forward to the first instance within range
+        // by calculating how many complete periods have elapsed and adding them to startTime
         if (instanceStart < startDate) {
             instanceStart =
                 schedule.startTime + ((startDate - schedule.startTime) / schedule.frequency) * schedule.frequency;
