@@ -143,9 +143,7 @@ abstract contract CommuneViewer {
         uint256 count = 0;
 
         for (uint256 i = 0; i < schedules.length; i++) {
-            count = _generateChoreInstances(
-                communeId, schedules[i], members, startDate, endDate, tempInstances, count
-            );
+            count = _generateChoreInstances(communeId, schedules[i], members, startDate, endDate, tempInstances, count);
         }
 
         // Trim to actual size
@@ -171,8 +169,8 @@ abstract contract CommuneViewer {
 
         uint256 instanceStart = schedule.startTime;
         if (instanceStart < startDate) {
-            instanceStart = schedule.startTime +
-                ((startDate - schedule.startTime) / schedule.frequency) * schedule.frequency;
+            instanceStart =
+                schedule.startTime + ((startDate - schedule.startTime) / schedule.frequency) * schedule.frequency;
         }
 
         uint256 count = startIndex;
