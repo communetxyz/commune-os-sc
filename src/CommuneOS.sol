@@ -34,7 +34,7 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     constructor(address collateralToken) {
         communeRegistry = new CommuneRegistry();
         memberRegistry = new MemberRegistry();
-        choreScheduler = new ChoreScheduler();
+        choreScheduler = new ChoreScheduler(address(memberRegistry));
         expenseManager = new ExpenseManager();
         votingModule = new VotingModule();
         collateralManager = new CollateralManager(collateralToken);
