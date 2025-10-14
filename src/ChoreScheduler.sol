@@ -173,19 +173,26 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @param period The period number
     /// @param members Array of commune members
+    /// @param memberRegistry MemberRegistry instance for validating overrides
     /// @return address The assigned member for that period
-    /// @dev Returns override assignee if set for the period, otherwise uses rotation
-    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
-        external
-        view
-        returns (address)
-    {
+    /// @dev Returns override assignee if set and still a member, otherwise uses rotation
+    function getChoreAssigneeForPeriod(
+        uint256 communeId,
+        uint256 choreId,
+        uint256 period,
+        address[] memory members,
+        IMemberRegistry memberRegistry
+    ) external view returns (address) {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         // Check if there's an override for this period
         address override_ = choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
-            return override_;
+            // Verify override is still a valid member using O(1) lookup
+            if (memberRegistry.isMember(communeId, override_)) {
+                return override_;
+            }
+            // Override is no longer a member, fall through to rotation
         }
 
         // Use rotation based on period
