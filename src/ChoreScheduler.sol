@@ -161,6 +161,32 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         return members[memberIndex];
     }
 
+    /// @notice Get the assigned member for a chore in a specific period
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID
+    /// @param period The period number
+    /// @param members Array of commune members
+    /// @return address The assigned member for that period
+    /// @dev Returns override assignee if set for the period, otherwise uses rotation
+    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
+        external
+        view
+        returns (address)
+    {
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+
+        // Check if there's an override for this period
+        address override_ = choreAssigneeOverrides[communeId][choreId][period];
+        if (override_ != address(0)) {
+            return override_;
+        }
+
+        // Use rotation based on period
+        if (members.length == 0) revert NoMembers();
+        uint256 memberIndex = (choreId + period) % members.length;
+        return members[memberIndex];
+    }
+
     /// @notice Calculate which member index is assigned to a chore in a given period
     /// @param choreId The chore ID
     /// @param period The period number
