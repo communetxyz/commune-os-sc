@@ -38,7 +38,11 @@ interface IMemberRegistry {
         view;
 
     function joinCommune(
-        uint256 communeId, address memberAddress, uint256 nonce, uint256 collateralAmount, string memory username
+        uint256 communeId,
+        address memberAddress,
+        uint256 nonce,
+        uint256 collateralAmount,
+        string memory username
     ) external;
 
     function isNonceUsed(uint256 communeId, uint256 nonce) external view returns (bool);
