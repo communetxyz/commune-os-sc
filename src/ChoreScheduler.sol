@@ -138,7 +138,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @param members Array of commune members
     /// @return address The assigned member
-    /// @dev Returns override assignee if set for current period, otherwise uses rotation based on (choreId + period) % memberCount
+    /// @dev Returns override assignee if set and still a member, otherwise uses rotation based on (choreId + period) % memberCount
     function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
         external
         view
@@ -152,7 +152,13 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         // Check if there's an override for this period
         address override_ = choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
-            return override_;
+            // Verify override is still a valid member
+            for (uint256 i = 0; i < members.length; i++) {
+                if (members[i] == override_) {
+                    return override_;
+                }
+            }
+            // Override is no longer a member, fall through to rotation
         }
 
         // Use rotation based on current period
@@ -203,18 +209,4 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         return (choreId + period) % memberCount;
     }
 
-    /// @notice Clear all chore assignments for a specific member
-    /// @param communeId The commune ID
-    /// @param memberAddress The member whose assignments should be cleared
-    /// @dev Iterates through all chores and clears overrides for current period where member is assigned
-    function clearMemberAssignments(uint256 communeId, address memberAddress) external onlyCommuneOS {
-        ChoreSchedule[] storage schedules = choreSchedules[communeId];
-        for (uint256 i = 0; i < schedules.length; i++) {
-            uint256 currentPeriod = getCurrentPeriod(communeId, i);
-            if (choreAssigneeOverrides[communeId][i][currentPeriod] == memberAddress) {
-                choreAssigneeOverrides[communeId][i][currentPeriod] = address(0);
-                emit ChoreAssigneeSet(communeId, i, address(0));
-            }
-        }
-    }
 }

@@ -214,15 +214,14 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @notice Remove a member from a commune
     /// @param communeId The commune ID
     /// @param memberAddress Address of the member to remove
-    /// @dev Caller must be a member of the commune. Withdraws all collateral and clears assignments.
+    /// @dev Caller must be a member of the commune. Withdraws all collateral. Chore assignments are automatically invalidated.
     function removeMember(uint256 communeId, address memberAddress) external onlyMember(communeId) {
         // Withdraw all collateral (if any exists)
         collateralManager.withdrawCollateral(memberAddress);
 
-        // Clear any chore assignments for this member
-        choreScheduler.clearMemberAssignments(communeId, memberAddress);
-
         // Remove member from registry
+        // Note: Chore assignment overrides for this member are automatically invalidated
+        // by getChoreAssignee() which validates the member is still in the commune
         memberRegistry.removeMember(communeId, memberAddress);
     }
 }
