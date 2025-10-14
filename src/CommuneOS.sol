@@ -110,9 +110,10 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @notice Mark a chore as complete
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @param period The period number to mark complete
     /// @dev Caller must be a member of the commune
-    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyMember(communeId) {
-        choreScheduler.markChoreComplete(communeId, choreId);
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyMember(communeId) {
+        choreScheduler.markChoreComplete(communeId, choreId, period);
     }
 
     /// @notice Create an expense with direct assignment
