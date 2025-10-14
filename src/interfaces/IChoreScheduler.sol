@@ -54,7 +54,12 @@ interface IChoreScheduler {
         view
         returns (address);
 
-    function getAssignedMemberIndex(uint256 communeId, uint256 choreId, uint256 period, uint256 memberCount)
+    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
+        external
+        view
+        returns (address);
+
+    function getAssignedMemberIndex(uint256 choreId, uint256 period, uint256 memberCount)
         external
         pure
         returns (uint256);

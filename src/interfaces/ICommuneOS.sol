@@ -13,10 +13,11 @@ interface ICommuneOS {
         string memory name,
         bool collateralRequired,
         uint256 collateralAmount,
-        ChoreSchedule[] memory choreSchedules
+        ChoreSchedule[] memory choreSchedules,
+        string memory username
     ) external returns (uint256 communeId);
 
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external;
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature, string memory username) external;
 
     function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external;
 
