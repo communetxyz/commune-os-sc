@@ -406,8 +406,9 @@ contract CommuneOSTest is Test {
 
         // Get members list for checking assignment
         address[] memory members = communeOS.memberRegistry().getCommuneMembers(communeId);
-        address assignee =
-            communeOS.choreScheduler().getChoreAssignee(communeId, 0, members, communeOS.memberRegistry());
+        address assignee = communeOS.choreScheduler().getChoreAssigneeForPeriod(
+            communeId, 0, currentPeriod, members, communeOS.memberRegistry()
+        );
         assertEq(assignee, member1);
 
         // Remove member1
@@ -416,7 +417,9 @@ contract CommuneOSTest is Test {
 
         // Verify assignment was cleared (now uses rotation, should be creator)
         members = communeOS.memberRegistry().getCommuneMembers(communeId);
-        assignee = communeOS.choreScheduler().getChoreAssignee(communeId, 0, members, communeOS.memberRegistry());
+        assignee = communeOS.choreScheduler().getChoreAssigneeForPeriod(
+            communeId, 0, currentPeriod, members, communeOS.memberRegistry()
+        );
         assertEq(assignee, creator); // Should fall back to rotation
     }
 

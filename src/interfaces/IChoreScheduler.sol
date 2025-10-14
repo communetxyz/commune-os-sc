@@ -51,13 +51,6 @@ interface IChoreScheduler {
 
     function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 
-    function getChoreAssignee(
-        uint256 communeId,
-        uint256 choreId,
-        address[] memory members,
-        IMemberRegistry memberRegistry
-    ) external view returns (address);
-
     function getChoreAssigneeForPeriod(
         uint256 communeId,
         uint256 choreId,
