@@ -17,6 +17,9 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @dev 0 means not registered (since commune IDs start at 1)
     mapping(address => uint256) public memberCommuneId;
 
+    /// @notice Maps member addresses to their username
+    mapping(address => string) public memberUsername;
+
     /// @notice Tracks which nonces have been used for each commune to prevent replay attacks
     /// @dev communeId => nonce => used
     mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
@@ -49,42 +52,55 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @param memberAddress Address of the member joining
     /// @param nonce The invite nonce to mark as used
     /// @param collateralAmount Amount of collateral deposited
+    /// @param username Username chosen by the member (optional)
     /// @dev Called by CommuneOS after invite validation and collateral handling
-    function joinCommune(uint256 communeId, address memberAddress, uint256 nonce, uint256 collateralAmount)
-        external
-        onlyCommuneOS
-    {
+    function joinCommune(
+        uint256 communeId,
+        address memberAddress,
+        uint256 nonce,
+        uint256 collateralAmount,
+        string memory username
+    ) external onlyCommuneOS {
         // Mark nonce as used (validated in validateInvite, but must be marked here)
         usedNonces[communeId][nonce] = true;
 
         // Register the member
-        _registerMember(communeId, memberAddress, collateralAmount);
-        emit MemberJoined(memberAddress, communeId, collateralAmount, block.timestamp);
+        _registerMember(communeId, memberAddress, collateralAmount, username);
+        emit MemberJoined(memberAddress, communeId, collateralAmount, block.timestamp, username);
     }
 
     /// @notice Registers a new member to a commune
     /// @param communeId ID of the commune to join
     /// @param memberAddress Address of the new member
+    /// @param username Username chosen by the member (optional)
     /// @dev Third parameter (collateralAmount) is ignored but kept for interface compatibility
     /// @dev Reverts if address is zero or already registered to any commune
-    function registerMember(uint256 communeId, address memberAddress, uint256) external onlyCommuneOS {
-        _registerMember(communeId, memberAddress, 0);
+    function registerMember(uint256 communeId, address memberAddress, uint256, string memory username)
+        external
+        onlyCommuneOS
+    {
+        _registerMember(communeId, memberAddress, 0, username);
     }
 
     /// @notice Internal function to register a member
     /// @param communeId ID of the commune to join
     /// @param memberAddress Address of the new member
     /// @param collateralAmount Amount of collateral deposited (for event logging)
-    function _registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount) internal {
+    /// @param username Username chosen by the member (optional)
+    function _registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount, string memory username)
+        internal
+    {
         if (memberAddress == address(0)) revert InvalidAddress();
         if (memberCommuneId[memberAddress] != 0) revert AlreadyRegistered();
 
-        Member memory newMember = Member({walletAddress: memberAddress, communeId: communeId, active: true});
+        Member memory newMember =
+            Member({walletAddress: memberAddress, communeId: communeId, active: true, username: username});
 
         communeMembers[communeId].push(newMember);
         memberCommuneId[memberAddress] = communeId;
+        memberUsername[memberAddress] = username;
 
-        emit MemberRegistered(memberAddress, communeId, collateralAmount, block.timestamp);
+        emit MemberRegistered(memberAddress, communeId, collateralAmount, block.timestamp, username);
     }
 
     /// @notice Checks if an address is a member of a specific commune

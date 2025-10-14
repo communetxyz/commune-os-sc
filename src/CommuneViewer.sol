@@ -94,6 +94,7 @@ abstract contract CommuneViewer {
     /// @return communeData The commune basic information
     /// @return members Array of all member addresses
     /// @return memberCollaterals Collateral balance for each member (parallel to members array)
+    /// @return memberUsernames Username for each member (parallel to members array)
     function getCommuneBasicInfo(address user)
         external
         view
@@ -101,7 +102,8 @@ abstract contract CommuneViewer {
             uint256 communeId,
             Commune memory communeData,
             address[] memory members,
-            uint256[] memory memberCollaterals
+            uint256[] memory memberCollaterals,
+            string[] memory memberUsernames
         )
     {
         // Get the commune this user belongs to
@@ -114,10 +116,12 @@ abstract contract CommuneViewer {
         // Get all members
         members = memberRegistry.getCommuneMembers(communeId);
 
-        // Get collateral balance for each member
+        // Get collateral balance and username for each member
         memberCollaterals = new uint256[](members.length);
+        memberUsernames = new string[](members.length);
         for (uint256 i = 0; i < members.length; i++) {
             memberCollaterals[i] = collateralManager.getCollateralBalance(members[i]);
+            memberUsernames[i] = memberRegistry.memberUsername(members[i]);
         }
     }
 
@@ -178,6 +182,7 @@ abstract contract CommuneViewer {
         uint256 count = startIndex;
         while (instanceStart < endDate) {
             uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
+            address assignee = choreScheduler.getChoreAssigneeForPeriod(communeId, schedule.id, period, members);
 
             instances[count++] = ChoreInstance({
                 scheduleId: schedule.id,
@@ -186,7 +191,8 @@ abstract contract CommuneViewer {
                 periodNumber: period,
                 periodStart: instanceStart,
                 periodEnd: instanceStart + schedule.frequency,
-                assignedTo: choreScheduler.getChoreAssigneeForPeriod(communeId, schedule.id, period, members),
+                assignedTo: assignee,
+                assignedToUsername: memberRegistry.memberUsername(assignee),
                 completed: choreScheduler.isChoreComplete(communeId, schedule.id, period)
             });
 
@@ -333,5 +339,16 @@ abstract contract CommuneViewer {
         }
 
         return voters;
+    }
+
+    /// @notice Get usernames for an array of addresses
+    /// @param addresses Array of addresses to get usernames for
+    /// @return usernames Array of usernames (parallel to addresses array)
+    function getUsernames(address[] memory addresses) external view returns (string[] memory usernames) {
+        usernames = new string[](addresses.length);
+        for (uint256 i = 0; i < addresses.length; i++) {
+            usernames[i] = memberRegistry.memberUsername(addresses[i]);
+        }
+        return usernames;
     }
 }
