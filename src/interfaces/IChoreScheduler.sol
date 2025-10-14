@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "./IMemberRegistry.sol";
+
 /// @notice Represents a recurring chore schedule
 /// @dev Chores are period-based with automatic rotation assignment
 struct ChoreSchedule {
@@ -49,10 +51,12 @@ interface IChoreScheduler {
 
     function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 
-    function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
-        external
-        view
-        returns (address);
+    function getChoreAssignee(
+        uint256 communeId,
+        uint256 choreId,
+        address[] memory members,
+        IMemberRegistry memberRegistry
+    ) external view returns (address);
 
     function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
         external

@@ -10,9 +10,6 @@ import "./CommuneOSModule.sol";
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage per completion
 contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
-    /// @notice Reference to MemberRegistry for validating chore assignments
-    IMemberRegistry public immutable memberRegistry;
-
     /// @notice Stores all chore schedules for each commune
     /// @dev Maps commune ID => array of ChoreSchedule structs
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
@@ -24,12 +21,6 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @notice Stores manual assignee overrides for specific chores per period
     /// @dev Maps commune ID => chore ID => period number => assignee address (address(0) means use rotation)
     mapping(uint256 => mapping(uint256 => mapping(uint256 => address))) public choreAssigneeOverrides;
-
-    /// @notice Initialize ChoreScheduler with MemberRegistry reference
-    /// @param _memberRegistry Address of the MemberRegistry contract
-    constructor(address _memberRegistry) {
-        memberRegistry = IMemberRegistry(_memberRegistry);
-    }
 
     /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID
@@ -147,13 +138,15 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param communeId The commune ID
     /// @param choreId The chore ID
     /// @param members Array of commune members
+    /// @param memberRegistry MemberRegistry instance for validating overrides
     /// @return address The assigned member
     /// @dev Returns override assignee if set and still a member, otherwise uses rotation based on (choreId + period) % memberCount
-    function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
-        external
-        view
-        returns (address)
-    {
+    function getChoreAssignee(
+        uint256 communeId,
+        uint256 choreId,
+        address[] memory members,
+        IMemberRegistry memberRegistry
+    ) external view returns (address) {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         // Get current period
