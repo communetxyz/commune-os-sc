@@ -216,5 +216,4 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         // Simple rotation: period % memberCount
         return (choreId + period) % memberCount;
     }
-
 }

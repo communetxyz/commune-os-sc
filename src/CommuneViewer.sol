@@ -182,7 +182,8 @@ abstract contract CommuneViewer {
         uint256 count = startIndex;
         while (instanceStart < endDate) {
             uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
-            address assignee = choreScheduler.getChoreAssigneeForPeriod(communeId, schedule.id, period, members, memberRegistry);
+            address assignee =
+                choreScheduler.getChoreAssigneeForPeriod(communeId, schedule.id, period, members, memberRegistry);
 
             instances[count++] = ChoreInstance({
                 scheduleId: schedule.id,

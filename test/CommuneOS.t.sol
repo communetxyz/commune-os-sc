@@ -406,7 +406,8 @@ contract CommuneOSTest is Test {
 
         // Get members list for checking assignment
         address[] memory members = communeOS.memberRegistry().getCommuneMembers(communeId);
-        address assignee = communeOS.choreScheduler().getChoreAssignee(communeId, 0, members, communeOS.memberRegistry());
+        address assignee =
+            communeOS.choreScheduler().getChoreAssignee(communeId, 0, members, communeOS.memberRegistry());
         assertEq(assignee, member1);
 
         // Remove member1
