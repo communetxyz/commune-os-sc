@@ -15,6 +15,7 @@ struct ChoreInstance {
     uint256 periodStart;
     uint256 periodEnd;
     address assignedTo;
+    string assignedToUsername;
     bool completed;
 }
 
@@ -42,7 +43,8 @@ interface ICommuneViewer {
             uint256 communeId,
             Commune memory communeData,
             address[] memory members,
-            uint256[] memory memberCollaterals
+            uint256[] memory memberCollaterals,
+            string[] memory memberUsernames
         );
 
     function getCommuneChores(address user, uint256 startDate, uint256 endDate)
@@ -64,4 +66,6 @@ interface ICommuneViewer {
     function getCommuneDisputes(uint256 communeId) external view returns (Dispute[] memory disputes);
 
     function getDisputeVoters(uint256 disputeId, uint256 communeId) external view returns (address[] memory voters);
+
+    function getUsernames(address[] memory addresses) external view returns (string[] memory usernames);
 }

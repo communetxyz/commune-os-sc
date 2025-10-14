@@ -45,12 +45,14 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @param collateralRequired Whether collateral is required
     /// @param collateralAmount The required collateral amount
     /// @param choreSchedules Initial chore schedules
+    /// @param username Username for the creator (optional)
     /// @return communeId The ID of the created commune
     function createCommune(
         string memory name,
         bool collateralRequired,
         uint256 collateralAmount,
-        ChoreSchedule[] memory choreSchedules
+        ChoreSchedule[] memory choreSchedules,
+        string memory username
     ) external returns (uint256 communeId) {
         // Create the commune
         communeId = communeRegistry.createCommune(name, msg.sender, collateralRequired, collateralAmount);
@@ -68,7 +70,7 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         }
 
         // Register creator as first member
-        memberRegistry.registerMember(communeId, msg.sender, depositedCollateral);
+        memberRegistry.registerMember(communeId, msg.sender, depositedCollateral, username);
 
         return communeId;
     }
@@ -77,8 +79,9 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @param communeId The commune ID
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
+    /// @param username Username for the joining member (optional)
     /// @dev MemberRegistry handles invite validation, nonce tracking, and registration
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external {
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature, string memory username) external {
         // Get commune details
         Commune memory commune = communeRegistry.getCommune(communeId);
 
@@ -93,7 +96,7 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         }
 
         // Register the member via MemberRegistry (which marks nonce as used)
-        memberRegistry.joinCommune(communeId, msg.sender, nonce, collateralAmount);
+        memberRegistry.joinCommune(communeId, msg.sender, nonce, collateralAmount, username);
     }
 
     /// @notice Add chore schedules to a commune

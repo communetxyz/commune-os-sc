@@ -48,7 +48,7 @@ contract InviteGeneratorTest is Test {
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
         vm.stopPrank();
 
         // Generate invite using utility
@@ -61,7 +61,7 @@ contract InviteGeneratorTest is Test {
         // Member1 joins with generated invite
         vm.startPrank(member1);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "alice");
         vm.stopPrank();
 
         // Verify member joined successfully
@@ -79,7 +79,7 @@ contract InviteGeneratorTest is Test {
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
         vm.stopPrank();
 
         // Generate multiple invites
@@ -97,13 +97,13 @@ contract InviteGeneratorTest is Test {
         // Member1 joins with first invite
         vm.startPrank(member1);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        communeOS.joinCommune(communeId, nonces[0], signatures[0]);
+        communeOS.joinCommune(communeId, nonces[0], signatures[0], "bob");
         vm.stopPrank();
 
         // Member2 joins with second invite
         vm.startPrank(member2);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        communeOS.joinCommune(communeId, nonces[1], signatures[1]);
+        communeOS.joinCommune(communeId, nonces[1], signatures[1], "charlie");
         vm.stopPrank();
 
         // Verify both members joined
@@ -117,7 +117,7 @@ contract InviteGeneratorTest is Test {
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
         vm.stopPrank();
 
         // Generate invite with wrong private key (not creator)
@@ -128,7 +128,7 @@ contract InviteGeneratorTest is Test {
         vm.startPrank(member1);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         vm.expectRevert(IMemberRegistry.InvalidInvite.selector);
-        communeOS.joinCommune(communeId, nonce, invalidSignature);
+        communeOS.joinCommune(communeId, nonce, invalidSignature, "alice");
         vm.stopPrank();
     }
 
@@ -138,7 +138,7 @@ contract InviteGeneratorTest is Test {
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
         vm.stopPrank();
 
         // Generate invite
@@ -148,14 +148,14 @@ contract InviteGeneratorTest is Test {
         // Member1 joins
         vm.startPrank(member1);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "alice");
         vm.stopPrank();
 
         // Try to reuse same nonce - should fail
         vm.startPrank(member2);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         vm.expectRevert(); // Will revert with NonceAlreadyUsed
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "bob");
         vm.stopPrank();
     }
 
@@ -164,12 +164,12 @@ contract InviteGeneratorTest is Test {
         // Create first commune
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId1 = communeOS.createCommune("Test Commune 1", false, 0, schedules);
+        uint256 communeId1 = communeOS.createCommune("Test Commune 1", false, 0, schedules, "creator");
         vm.stopPrank();
 
         // Create second commune with different creator (member2)
         vm.startPrank(member2);
-        uint256 communeId2 = communeOS.createCommune("Test Commune 2", false, 0, schedules);
+        uint256 communeId2 = communeOS.createCommune("Test Commune 2", false, 0, schedules, "member2");
         vm.stopPrank();
 
         // Generate invite for commune 1 from creator
@@ -180,7 +180,7 @@ contract InviteGeneratorTest is Test {
         // (signature is from creator, but member2 is the creator of commune 2)
         vm.startPrank(member1);
         vm.expectRevert(IMemberRegistry.InvalidInvite.selector);
-        communeOS.joinCommune(communeId2, nonce, signature);
+        communeOS.joinCommune(communeId2, nonce, signature, "alice");
         vm.stopPrank();
     }
 
@@ -198,7 +198,7 @@ contract InviteGeneratorTest is Test {
         // Create commune without collateral
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune("No Collateral Commune", false, 0, schedules);
+        uint256 communeId = communeOS.createCommune("No Collateral Commune", false, 0, schedules, "creator");
         vm.stopPrank();
 
         // Generate invite
@@ -207,7 +207,7 @@ contract InviteGeneratorTest is Test {
 
         // Member joins without needing to approve collateral
         vm.startPrank(member1);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "alice");
         vm.stopPrank();
 
         // Verify member joined
@@ -224,7 +224,7 @@ contract InviteGeneratorTest is Test {
         // Create commune
         vm.startPrank(creator);
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
         vm.stopPrank();
 
         // Generate 10 invites
@@ -245,6 +245,40 @@ contract InviteGeneratorTest is Test {
                 assertTrue(keccak256(signatures[i]) != keccak256(signatures[i - 1]), "Signatures should be unique");
             }
         }
+    }
+
+    /// @notice Test that username is stored in mapping and accessible
+    function testUsernameMapping() public {
+        // Create commune
+        vm.startPrank(creator);
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "alice");
+        vm.stopPrank();
+
+        // Verify creator's username is stored
+        assertEq(communeOS.memberRegistry().memberUsername(creator), "alice", "Creator username should be alice");
+
+        // Generate invite
+        uint256 nonce = 1;
+        bytes memory signature = inviteGenerator.generateInvite(creatorPrivateKey, communeId, nonce);
+
+        // Member1 joins with username "bob"
+        vm.startPrank(member1);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        communeOS.joinCommune(communeId, nonce, signature, "bob");
+        vm.stopPrank();
+
+        // Verify member1's username is stored
+        assertEq(communeOS.memberRegistry().memberUsername(member1), "bob", "Member1 username should be bob");
+
+        // Test getUsernames function
+        address[] memory addresses = new address[](2);
+        addresses[0] = creator;
+        addresses[1] = member1;
+        string[] memory usernames = communeOS.getUsernames(addresses);
+        assertEq(usernames[0], "alice", "Creator username from getUsernames should be alice");
+        assertEq(usernames[1], "bob", "Member1 username from getUsernames should be bob");
     }
 
     /// @notice Test that the message hash format matches CommuneRegistry

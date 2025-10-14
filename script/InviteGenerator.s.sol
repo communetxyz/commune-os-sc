@@ -123,6 +123,7 @@ contract InviteGenerator is Script {
             signatures[i] = generateInvite(privateKey, communeId, nonces[i]);
 
             // Build URL in format: https://www.share-house.fun/join?communeId=1&nonce=16&signature=0x...
+            // Note: username parameter should be added by frontend when user submits the form
             string memory inviteUrl = string.concat(
                 frontendUrl,
                 "/join?communeId=",
