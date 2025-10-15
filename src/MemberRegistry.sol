@@ -87,9 +87,12 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @param memberAddress Address of the new member
     /// @param collateralAmount Amount of collateral deposited (for event logging)
     /// @param username Username chosen by the member (optional)
-    function _registerMember(uint256 communeId, address memberAddress, uint256 collateralAmount, string memory username)
-        internal
-    {
+    function _registerMember(
+        uint256 communeId,
+        address memberAddress,
+        uint256 collateralAmount,
+        string memory username
+    ) internal {
         if (memberAddress == address(0)) revert InvalidAddress();
         if (memberCommuneId[memberAddress] != 0) revert AlreadyRegistered();
 
