@@ -47,9 +47,12 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](2);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
-        schedules[1] =
-            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp});
+        schedules[0] = ChoreSchedule({
+            id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false
+        });
+        schedules[1] = ChoreSchedule({
+            id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp, deleted: false
+        });
 
         // Approve collateral for creator
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
@@ -105,7 +108,9 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        schedules[0] = ChoreSchedule({
+            id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false
+        });
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
@@ -249,7 +254,8 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp});
+        schedules[0] =
+            ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp, deleted: false});
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
@@ -295,6 +301,60 @@ contract CommuneOSTest is Test {
         token.approve(address(communeOS.collateralManager()), 1);
         vm.expectRevert(); // Will revert on transferFrom due to insufficient approval
         communeOS.joinCommune(communeId, nonce, signature, "alice");
+
+        vm.stopPrank();
+    }
+
+    function testRemoveChore() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](3);
+        schedules[0] = ChoreSchedule({
+            id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false
+        });
+        schedules[1] = ChoreSchedule({
+            id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp, deleted: false
+        });
+        schedules[2] =
+            ChoreSchedule({id: 2, title: "Garden Work", frequency: 2 days, startTime: block.timestamp, deleted: false});
+
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
+
+        // Verify initial chore count
+        ChoreSchedule[] memory initialChores = communeOS.choreScheduler().getChoreSchedules(communeId);
+        assertEq(initialChores.length, 3);
+        assertEq(initialChores[0].title, "Kitchen Cleaning");
+        assertEq(initialChores[1].title, "Bathroom Cleaning");
+        assertEq(initialChores[2].title, "Garden Work");
+
+        // Remove chore at index 1 (Bathroom Cleaning)
+        communeOS.removeChore(communeId, 1);
+
+        // Verify chore count decreased (soft delete filters out deleted chores)
+        ChoreSchedule[] memory choresAfterRemoval = communeOS.choreScheduler().getChoreSchedules(communeId);
+        assertEq(choresAfterRemoval.length, 2);
+
+        // Verify remaining chores - IDs are preserved with soft delete
+        assertEq(choresAfterRemoval[0].title, "Kitchen Cleaning");
+        assertEq(choresAfterRemoval[0].id, 0);
+        assertEq(choresAfterRemoval[1].title, "Garden Work");
+        assertEq(choresAfterRemoval[1].id, 2); // Original ID preserved
+
+        // Remove another chore (removing index 0)
+        communeOS.removeChore(communeId, 0);
+
+        ChoreSchedule[] memory finalChores = communeOS.choreScheduler().getChoreSchedules(communeId);
+        assertEq(finalChores.length, 1);
+        assertEq(finalChores[0].title, "Garden Work");
+        assertEq(finalChores[0].id, 2); // Original ID still preserved
+
+        // Verify cannot operate on deleted chores
+        vm.expectRevert();
+        communeOS.markChoreComplete(communeId, 0, 0); // Chore 0 is deleted
+
+        vm.expectRevert();
+        communeOS.markChoreComplete(communeId, 1, 0); // Chore 1 is deleted
 
         vm.stopPrank();
     }
@@ -383,7 +443,9 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        schedules[0] = ChoreSchedule({
+            id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false
+        });
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
         // Generate invite and add member1

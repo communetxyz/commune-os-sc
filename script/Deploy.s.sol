@@ -63,7 +63,8 @@ contract DeployScript is Script {
                     id: 0, // Will be set by ChoreScheduler
                     title: title,
                     frequency: frequency,
-                    startTime: block.timestamp
+                    startTime: block.timestamp,
+                    deleted: false
                 });
             }
 

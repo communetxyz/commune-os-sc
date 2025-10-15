@@ -6,7 +6,7 @@ import "./IMemberRegistry.sol";
 /// @notice Represents a recurring chore schedule
 /// @dev Chores are period-based with automatic rotation assignment
 struct ChoreSchedule {
-    /// @notice Unique identifier for the chore within a commune
+    /// @notice Unique identifier for the chore within a commune (stable, never reused)
     uint256 id;
     /// @notice Description of the chore
     string title;
@@ -14,6 +14,8 @@ struct ChoreSchedule {
     uint256 frequency;
     /// @notice Unix timestamp when the chore schedule starts
     uint256 startTime;
+    /// @notice Whether this chore has been deleted (only set in mapping storage)
+    bool deleted;
 }
 
 /// @title IChoreScheduler
@@ -23,6 +25,7 @@ interface IChoreScheduler {
     event ChoreCreated(uint256 indexed communeId, uint256 indexed choreId, string title);
     event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
     event ChoreAssigneeSet(uint256 indexed communeId, uint256 indexed choreId, address indexed assignee);
+    event ChoreRemoved(uint256 indexed communeId, uint256 indexed choreId);
 
     // Errors
     error NoSchedulesProvided();
@@ -35,6 +38,8 @@ interface IChoreScheduler {
 
     // Functions
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
+
+    function removeChore(uint256 communeId, uint256 choreId) external;
 
     function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external;
 

@@ -107,6 +107,14 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         choreScheduler.addChores(communeId, choreSchedules);
     }
 
+    /// @notice Remove a chore schedule from a commune
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID to remove
+    /// @dev Caller must be a member of the commune
+    function removeChore(uint256 communeId, uint256 choreId) external onlyMember(communeId) {
+        choreScheduler.removeChore(communeId, choreId);
+    }
+
     /// @notice Mark a chore as complete
     /// @param communeId The commune ID
     /// @param choreId The chore ID
