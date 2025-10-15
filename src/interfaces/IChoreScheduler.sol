@@ -6,7 +6,7 @@ import "./IMemberRegistry.sol";
 /// @notice Represents a recurring chore schedule
 /// @dev Chores are period-based with automatic rotation assignment
 struct ChoreSchedule {
-    /// @notice Unique identifier for the chore within a commune
+    /// @notice Unique identifier for the chore within a commune (stable, never reused)
     uint256 id;
     /// @notice Description of the chore
     string title;
@@ -14,7 +14,7 @@ struct ChoreSchedule {
     uint256 frequency;
     /// @notice Unix timestamp when the chore schedule starts
     uint256 startTime;
-    /// @notice Whether this chore has been deleted (soft delete)
+    /// @notice Whether this chore has been deleted (only set in mapping storage)
     bool deleted;
 }
 
