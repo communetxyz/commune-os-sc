@@ -36,7 +36,7 @@ interface IChoreScheduler {
     // Functions
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
 
-    function markChoreComplete(uint256 communeId, uint256 choreId) external;
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external;
 
     function getCurrentPeriod(uint256 communeId, uint256 choreId) external view returns (uint256);
 
