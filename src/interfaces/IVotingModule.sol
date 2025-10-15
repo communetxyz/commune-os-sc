@@ -6,7 +6,6 @@ enum DisputeStatus {
     Pending, // Voting in progress
     Upheld, // Dispute accepted, reassignment occurs
     Rejected // Dispute rejected, no changes
-
 }
 
 /// @notice Represents a dispute over an expense assignment
