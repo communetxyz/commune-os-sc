@@ -47,9 +47,20 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](2);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false});
-        schedules[1] =
-            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp, deleted: false});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            deleted: false
+        });
+        schedules[1] = ChoreSchedule({
+            id: 1,
+            title: "Bathroom Cleaning",
+            frequency: 1 weeks,
+            startTime: block.timestamp,
+            deleted: false
+        });
 
         // Approve collateral for creator
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
@@ -105,7 +116,13 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            deleted: false
+        });
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
@@ -249,7 +266,8 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp, deleted: false});
+        schedules[0] =
+            ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp, deleted: false});
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
@@ -303,10 +321,22 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](3);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false});
-        schedules[1] =
-            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp, deleted: false});
-        schedules[2] = ChoreSchedule({id: 2, title: "Garden Work", frequency: 2 days, startTime: block.timestamp, deleted: false});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            deleted: false
+        });
+        schedules[1] = ChoreSchedule({
+            id: 1,
+            title: "Bathroom Cleaning",
+            frequency: 1 weeks,
+            startTime: block.timestamp,
+            deleted: false
+        });
+        schedules[2] =
+            ChoreSchedule({id: 2, title: "Garden Work", frequency: 2 days, startTime: block.timestamp, deleted: false});
 
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
         uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
@@ -433,7 +463,13 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
-        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp, deleted: false});
+        schedules[0] = ChoreSchedule({
+            id: 0,
+            title: "Kitchen Cleaning",
+            frequency: 1 days,
+            startTime: block.timestamp,
+            deleted: false
+        });
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
         // Generate invite and add member1
