@@ -21,7 +21,7 @@ interface ICommuneOS {
 
     function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external;
 
-    function markChoreComplete(uint256 communeId, uint256 choreId) external;
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external;
 
     function createExpense(
         uint256 communeId,

@@ -109,8 +109,8 @@ contract CommuneOSTest is Test {
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
-        // Mark chore complete
-        communeOS.markChoreComplete(communeId, 0);
+        // Mark chore complete for period 0
+        communeOS.markChoreComplete(communeId, 0, 0);
 
         // Check completion
         (ChoreSchedule[] memory returnedSchedules, uint256[] memory periods, bool[] memory completed) =

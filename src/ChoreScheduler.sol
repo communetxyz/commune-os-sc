@@ -49,14 +49,14 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         }
     }
 
-    /// @notice Mark a chore as complete for the current period
+    /// @notice Mark a chore as complete for a specific period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
-    /// @dev Automatically calculates the current period and marks it complete
-    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyCommuneOS {
+    /// @param period The period number to mark complete
+    /// @dev Marks the specified period as complete
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
-        uint256 period = getCurrentPeriod(communeId, choreId);
         if (completions[communeId][choreId][period]) revert AlreadyCompleted();
 
         completions[communeId][choreId][period] = true;
