@@ -42,7 +42,8 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
                 id: choreId,
                 title: schedules[i].title,
                 frequency: schedules[i].frequency,
-                startTime: schedules[i].startTime
+                startTime: schedules[i].startTime,
+                deleted: false
             });
 
             choreSchedules[communeId].push(schedule);
@@ -53,22 +54,13 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @notice Remove a chore schedule from a commune
     /// @param communeId The commune ID
     /// @param choreId The chore ID to remove
-    /// @dev Removes the chore by replacing it with the last element and popping the array
-    /// @dev After removal, the last chore's ID changes to the removed chore's position
+    /// @dev Soft deletes the chore by marking it as deleted, preserving chore IDs
+    /// @dev This ensures existing completions, overrides, and assignments remain valid
     function removeChore(uint256 communeId, uint256 choreId) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+        if (choreSchedules[communeId][choreId].deleted) revert InvalidChoreId();
 
-        uint256 lastIndex = choreSchedules[communeId].length - 1;
-
-        // If not removing the last element, swap with last element
-        if (choreId != lastIndex) {
-            choreSchedules[communeId][choreId] = choreSchedules[communeId][lastIndex];
-            // Update the ID of the moved chore to reflect its new position
-            choreSchedules[communeId][choreId].id = choreId;
-        }
-
-        // Remove the last element
-        choreSchedules[communeId].pop();
+        choreSchedules[communeId][choreId].deleted = true;
 
         emit ChoreRemoved(communeId, choreId);
     }
@@ -80,6 +72,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @dev Marks the specified period as complete
     function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+        if (choreSchedules[communeId][choreId].deleted) revert InvalidChoreId();
 
         if (completions[communeId][choreId][period]) revert AlreadyCompleted();
 
@@ -94,6 +87,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @dev Returns 0 if current time is before startTime, otherwise calculates elapsed periods
     function getCurrentPeriod(uint256 communeId, uint256 choreId) public view returns (uint256) {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+        if (choreSchedules[communeId][choreId].deleted) revert InvalidChoreId();
 
         ChoreSchedule memory schedule = choreSchedules[communeId][choreId];
         if (block.timestamp < schedule.startTime) {
@@ -114,14 +108,34 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
 
     /// @notice Get all chore schedules for a commune
     /// @param communeId The commune ID
-    /// @return ChoreSchedule[] Array of chore schedules
+    /// @return ChoreSchedule[] Array of non-deleted chore schedules
     function getChoreSchedules(uint256 communeId) external view returns (ChoreSchedule[] memory) {
-        return choreSchedules[communeId];
+        ChoreSchedule[] memory allChores = choreSchedules[communeId];
+
+        // Count non-deleted chores
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allChores.length; i++) {
+            if (!allChores[i].deleted) {
+                activeCount++;
+            }
+        }
+
+        // Create array with only active chores
+        ChoreSchedule[] memory activeChores = new ChoreSchedule[](activeCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < allChores.length; i++) {
+            if (!allChores[i].deleted) {
+                activeChores[index] = allChores[i];
+                index++;
+            }
+        }
+
+        return activeChores;
     }
 
     /// @notice Get current chores with their completion status
     /// @param communeId The commune ID
-    /// @return schedules Array of schedules
+    /// @return schedules Array of non-deleted schedules
     /// @return periods Current period for each chore
     /// @return completed Completion status for current period
     function getCurrentChores(uint256 communeId)
@@ -129,15 +143,29 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         view
         returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed)
     {
-        schedules = choreSchedules[communeId];
-        uint256 count = schedules.length;
+        ChoreSchedule[] memory allChores = choreSchedules[communeId];
 
-        periods = new uint256[](count);
-        completed = new bool[](count);
+        // Count non-deleted chores
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < allChores.length; i++) {
+            if (!allChores[i].deleted) {
+                activeCount++;
+            }
+        }
 
-        for (uint256 i = 0; i < count; i++) {
-            periods[i] = getCurrentPeriod(communeId, i);
-            completed[i] = completions[communeId][i][periods[i]];
+        // Create arrays for active chores only
+        schedules = new ChoreSchedule[](activeCount);
+        periods = new uint256[](activeCount);
+        completed = new bool[](activeCount);
+
+        uint256 index = 0;
+        for (uint256 i = 0; i < allChores.length; i++) {
+            if (!allChores[i].deleted) {
+                schedules[index] = allChores[i];
+                periods[index] = getCurrentPeriod(communeId, i);
+                completed[index] = completions[communeId][i][periods[index]];
+                index++;
+            }
         }
 
         return (schedules, periods, completed);
@@ -153,6 +181,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         onlyCommuneOS
     {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+        if (choreSchedules[communeId][choreId].deleted) revert InvalidChoreId();
         choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }
@@ -173,6 +202,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         IMemberRegistry memberRegistry
     ) external view returns (address) {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+        if (choreSchedules[communeId][choreId].deleted) revert InvalidChoreId();
 
         // Check if there's an override for this period
         address override_ = choreAssigneeOverrides[communeId][choreId][period];

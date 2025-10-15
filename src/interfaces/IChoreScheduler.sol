@@ -14,6 +14,8 @@ struct ChoreSchedule {
     uint256 frequency;
     /// @notice Unix timestamp when the chore schedule starts
     uint256 startTime;
+    /// @notice Whether this chore has been deleted (soft delete)
+    bool deleted;
 }
 
 /// @title IChoreScheduler
