@@ -75,4 +75,23 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     function getCollateralBalance(address member) external view returns (uint256) {
         return collateralBalance[member];
     }
+
+    /// @notice Withdraw all remaining collateral for a member
+    /// @param member The member address
+    /// @dev Uses checks-effects-interactions pattern with SafeERC20 to prevent reentrancy
+    function withdrawCollateral(address member) external onlyCommuneOS {
+        // Get the full balance
+        uint256 amount = collateralBalance[member];
+
+        // Checks - only withdraw if there's a balance
+        if (amount == 0) return;
+
+        // Effects
+        collateralBalance[member] = 0;
+
+        // Interactions - SafeERC20 automatically reverts on failure
+        collateralToken.safeTransfer(member, amount);
+
+        emit CollateralWithdrawn(member, amount);
+    }
 }

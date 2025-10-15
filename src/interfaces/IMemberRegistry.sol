@@ -24,6 +24,7 @@ interface IMemberRegistry {
     event MemberJoined(
         address indexed member, uint256 indexed communeId, uint256 collateralAmount, uint256 timestamp, string username
     );
+    event MemberRemoved(address indexed member, uint256 indexed communeId, uint256 timestamp);
 
     // Errors
     error InvalidAddress();
@@ -31,6 +32,7 @@ interface IMemberRegistry {
     error InvalidInvite();
     error NonceAlreadyUsed();
     error InvalidSignatureLength();
+    error NotAMember();
 
     // Functions
     function validateInvite(uint256 communeId, address creatorAddress, uint256 nonce, bytes memory signature)
@@ -61,4 +63,6 @@ interface IMemberRegistry {
     function getMemberStatus(address memberAddress) external view returns (Member memory);
 
     function memberUsername(address memberAddress) external view returns (string memory);
+
+    function removeMember(uint256 communeId, address memberAddress) external;
 }

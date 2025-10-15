@@ -38,4 +38,8 @@ interface ICommuneOS {
         returns (uint256 disputeId);
 
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external;
+
+    function removeMember(uint256 communeId, address memberAddress) external;
+
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 }
