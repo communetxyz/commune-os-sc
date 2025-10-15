@@ -49,6 +49,29 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         }
     }
 
+    /// @notice Remove a chore schedule from a commune
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID to remove
+    /// @dev Removes the chore by replacing it with the last element and popping the array
+    /// @dev After removal, the last chore's ID changes to the removed chore's position
+    function removeChore(uint256 communeId, uint256 choreId) external onlyCommuneOS {
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+
+        uint256 lastIndex = choreSchedules[communeId].length - 1;
+
+        // If not removing the last element, swap with last element
+        if (choreId != lastIndex) {
+            choreSchedules[communeId][choreId] = choreSchedules[communeId][lastIndex];
+            // Update the ID of the moved chore to reflect its new position
+            choreSchedules[communeId][choreId].id = choreId;
+        }
+
+        // Remove the last element
+        choreSchedules[communeId].pop();
+
+        emit ChoreRemoved(communeId, choreId);
+    }
+
     /// @notice Mark a chore as complete for the current period
     /// @param communeId The commune ID
     /// @param choreId The chore ID

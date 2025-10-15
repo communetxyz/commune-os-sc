@@ -299,6 +299,49 @@ contract CommuneOSTest is Test {
         vm.stopPrank();
     }
 
+    function testRemoveChore() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](3);
+        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        schedules[1] =
+            ChoreSchedule({id: 1, title: "Bathroom Cleaning", frequency: 1 weeks, startTime: block.timestamp});
+        schedules[2] = ChoreSchedule({id: 2, title: "Garden Work", frequency: 2 days, startTime: block.timestamp});
+
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
+
+        // Verify initial chore count
+        ChoreSchedule[] memory initialChores = communeOS.choreScheduler().getChoreSchedules(communeId);
+        assertEq(initialChores.length, 3);
+        assertEq(initialChores[0].title, "Kitchen Cleaning");
+        assertEq(initialChores[1].title, "Bathroom Cleaning");
+        assertEq(initialChores[2].title, "Garden Work");
+
+        // Remove chore at index 1 (Bathroom Cleaning)
+        communeOS.removeChore(communeId, 1);
+
+        // Verify chore count decreased
+        ChoreSchedule[] memory choresAfterRemoval = communeOS.choreScheduler().getChoreSchedules(communeId);
+        assertEq(choresAfterRemoval.length, 2);
+
+        // Verify remaining chores - the last chore (Garden Work) should now be at index 1
+        assertEq(choresAfterRemoval[0].title, "Kitchen Cleaning");
+        assertEq(choresAfterRemoval[0].id, 0);
+        assertEq(choresAfterRemoval[1].title, "Garden Work");
+        assertEq(choresAfterRemoval[1].id, 1); // ID updated to reflect new position
+
+        // Remove another chore (now removing index 0)
+        communeOS.removeChore(communeId, 0);
+
+        ChoreSchedule[] memory finalChores = communeOS.choreScheduler().getChoreSchedules(communeId);
+        assertEq(finalChores.length, 1);
+        assertEq(finalChores[0].title, "Garden Work");
+        assertEq(finalChores[0].id, 0); // ID updated again
+
+        vm.stopPrank();
+    }
+
     // Helper function to add members with collateral
     function _addMemberWithCollateral(uint256 communeId, address member, uint256 nonce) internal {
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));

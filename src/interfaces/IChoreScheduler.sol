@@ -21,6 +21,7 @@ interface IChoreScheduler {
     event ChoreCreated(uint256 indexed communeId, uint256 indexed choreId, string title);
     event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
     event ChoreAssigneeSet(uint256 indexed communeId, uint256 indexed choreId, address indexed assignee);
+    event ChoreRemoved(uint256 indexed communeId, uint256 indexed choreId);
 
     // Errors
     error NoSchedulesProvided();
@@ -33,6 +34,8 @@ interface IChoreScheduler {
 
     // Functions
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
+
+    function removeChore(uint256 communeId, uint256 choreId) external;
 
     function markChoreComplete(uint256 communeId, uint256 choreId) external;
 
