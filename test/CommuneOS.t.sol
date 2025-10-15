@@ -109,8 +109,8 @@ contract CommuneOSTest is Test {
 
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
-        // Mark chore complete
-        communeOS.markChoreComplete(communeId, 0);
+        // Mark chore complete for period 0
+        communeOS.markChoreComplete(communeId, 0, 0);
 
         // Check completion
         (ChoreSchedule[] memory returnedSchedules, uint256[] memory periods, bool[] memory completed) =
@@ -340,6 +340,130 @@ contract CommuneOSTest is Test {
         assertEq(finalChores[0].id, 0); // ID updated again
 
         vm.stopPrank();
+    }
+
+    function testRemoveMember() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
+
+        vm.stopPrank();
+
+        // Add member1 with collateral
+        _addMemberWithCollateral(communeId, member1, 1);
+
+        // Verify member1 is a member
+        assertTrue(communeOS.memberRegistry().isMember(communeId, member1));
+        assertEq(communeOS.collateralManager().getCollateralBalance(member1), COLLATERAL_AMOUNT);
+
+        // Get initial token balance
+        uint256 initialBalance = token.balanceOf(member1);
+
+        // Remove member1
+        vm.prank(creator);
+        communeOS.removeMember(communeId, member1);
+
+        // Verify member1 is no longer a member
+        assertFalse(communeOS.memberRegistry().isMember(communeId, member1));
+
+        // Verify collateral was returned
+        assertEq(communeOS.collateralManager().getCollateralBalance(member1), 0);
+        assertEq(token.balanceOf(member1), initialBalance + COLLATERAL_AMOUNT);
+
+        // Verify member count decreased
+        (, uint256 memberCount,,) = communeOS.getCommuneStatistics(communeId);
+        assertEq(memberCount, 1); // Only creator remains
+    }
+
+    function testRemoveMemberWithoutCollateral() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
+
+        // Generate invite and add member1
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.stopPrank();
+
+        vm.startPrank(member1);
+        communeOS.joinCommune(communeId, nonce, signature, "member1");
+        vm.stopPrank();
+
+        // Verify member1 is a member
+        assertTrue(communeOS.memberRegistry().isMember(communeId, member1));
+
+        // Remove member1
+        vm.prank(creator);
+        communeOS.removeMember(communeId, member1);
+
+        // Verify member1 is no longer a member
+        assertFalse(communeOS.memberRegistry().isMember(communeId, member1));
+    }
+
+    function testCannotRemoveMemberIfNotMember() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
+
+        vm.stopPrank();
+
+        // Non-member tries to remove another address
+        vm.startPrank(member1);
+        vm.expectRevert(ICommuneOS.NotAMember.selector);
+        communeOS.removeMember(communeId, member2);
+        vm.stopPrank();
+    }
+
+    function testRemoveMemberClearsChoreAssignments() public {
+        vm.startPrank(creator);
+
+        ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
+        schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
+
+        // Generate invite and add member1
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
+        vm.stopPrank();
+
+        vm.startPrank(member1);
+        communeOS.joinCommune(communeId, nonce, signature, "member1");
+        vm.stopPrank();
+
+        // Assign chore to member1 for current period
+        uint256 currentPeriod = communeOS.choreScheduler().getCurrentPeriod(communeId, 0);
+        vm.prank(creator);
+        communeOS.setChoreAssignee(communeId, 0, currentPeriod, member1);
+
+        // Get members list for checking assignment
+        address[] memory members = communeOS.memberRegistry().getCommuneMembers(communeId);
+        address assignee = communeOS.choreScheduler().getChoreAssigneeForPeriod(
+            communeId, 0, currentPeriod, members, communeOS.memberRegistry()
+        );
+        assertEq(assignee, member1);
+
+        // Remove member1
+        vm.prank(creator);
+        communeOS.removeMember(communeId, member1);
+
+        // Verify assignment was cleared (now uses rotation, should be creator)
+        members = communeOS.memberRegistry().getCommuneMembers(communeId);
+        assignee = communeOS.choreScheduler().getChoreAssigneeForPeriod(
+            communeId, 0, currentPeriod, members, communeOS.memberRegistry()
+        );
+        assertEq(assignee, creator); // Should fall back to rotation
     }
 
     // Helper function to add members with collateral

@@ -21,7 +21,7 @@ interface ICommuneOS {
 
     function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external;
 
-    function markChoreComplete(uint256 communeId, uint256 choreId) external;
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external;
 
     function createExpense(
         uint256 communeId,
@@ -38,4 +38,8 @@ interface ICommuneOS {
         returns (uint256 disputeId);
 
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external;
+
+    function removeMember(uint256 communeId, address memberAddress) external;
+
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 }

@@ -118,9 +118,10 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @notice Mark a chore as complete
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @param period The period number to mark complete
     /// @dev Caller must be a member of the commune
-    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyMember(communeId) {
-        choreScheduler.markChoreComplete(communeId, choreId);
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyMember(communeId) {
+        choreScheduler.markChoreComplete(communeId, choreId, period);
     }
 
     /// @notice Create an expense with direct assignment
@@ -204,5 +205,32 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
                 expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
             );
         }
+    }
+
+    /// @notice Set an assignee override for a specific chore period
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID
+    /// @param period The period number
+    /// @param assignee The member to assign (address(0) to use rotation)
+    /// @dev Caller must be a member of the commune
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee)
+        external
+        onlyMember(communeId)
+    {
+        choreScheduler.setChoreAssignee(communeId, choreId, period, assignee);
+    }
+
+    /// @notice Remove a member from a commune
+    /// @param communeId The commune ID
+    /// @param memberAddress Address of the member to remove
+    /// @dev Caller must be a member of the commune. Withdraws all collateral. Chore assignments are automatically invalidated.
+    function removeMember(uint256 communeId, address memberAddress) external onlyMember(communeId) {
+        // Withdraw all collateral (if any exists)
+        collateralManager.withdrawCollateral(memberAddress);
+
+        // Remove member from registry
+        // Note: Chore assignment overrides for this member are automatically invalidated
+        // by getChoreAssignee() which validates the member is still in the commune
+        memberRegistry.removeMember(communeId, memberAddress);
     }
 }

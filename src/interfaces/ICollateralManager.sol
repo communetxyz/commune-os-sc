@@ -7,6 +7,7 @@ interface ICollateralManager {
     // Events
     event CollateralDeposited(address indexed member, uint256 amount);
     event CollateralSlashed(address indexed member, uint256 amount, address indexed recipient);
+    event CollateralWithdrawn(address indexed member, uint256 amount);
 
     // Errors
     error InvalidDepositAmount();
@@ -20,4 +21,6 @@ interface ICollateralManager {
     function isCollateralSufficient(address member, uint256 amount) external view returns (bool);
 
     function getCollateralBalance(address member) external view returns (uint256);
+
+    function withdrawCollateral(address member) external;
 }

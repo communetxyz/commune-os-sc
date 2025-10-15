@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import {ChoreSchedule} from "./interfaces/IChoreScheduler.sol";
 import "./interfaces/IChoreScheduler.sol";
+import "./interfaces/IMemberRegistry.sol";
 import "./CommuneOSModule.sol";
 
 /// @title ChoreScheduler
@@ -72,14 +73,14 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         emit ChoreRemoved(communeId, choreId);
     }
 
-    /// @notice Mark a chore as complete for the current period
+    /// @notice Mark a chore as complete for a specific period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
-    /// @dev Automatically calculates the current period and marks it complete
-    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyCommuneOS {
+    /// @param period The period number to mark complete
+    /// @dev Marks the specified period as complete
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
-        uint256 period = getCurrentPeriod(communeId, choreId);
         if (completions[communeId][choreId][period]) revert AlreadyCompleted();
 
         completions[communeId][choreId][period] = true;
@@ -156,52 +157,31 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }
 
-    /// @notice Get the assigned member for a chore in the current period
-    /// @param communeId The commune ID
-    /// @param choreId The chore ID
-    /// @param members Array of commune members
-    /// @return address The assigned member
-    /// @dev Returns override assignee if set for current period, otherwise uses rotation based on (choreId + period) % memberCount
-    function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
-        external
-        view
-        returns (address)
-    {
-        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
-
-        // Get current period
-        uint256 period = getCurrentPeriod(communeId, choreId);
-
-        // Check if there's an override for this period
-        address override_ = choreAssigneeOverrides[communeId][choreId][period];
-        if (override_ != address(0)) {
-            return override_;
-        }
-
-        // Use rotation based on current period
-        if (members.length == 0) revert NoMembers();
-        uint256 memberIndex = (choreId + period) % members.length;
-        return members[memberIndex];
-    }
-
     /// @notice Get the assigned member for a chore in a specific period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
     /// @param period The period number
     /// @param members Array of commune members
+    /// @param memberRegistry MemberRegistry instance for validating overrides
     /// @return address The assigned member for that period
-    /// @dev Returns override assignee if set for the period, otherwise uses rotation
-    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
-        external
-        view
-        returns (address)
-    {
+    /// @dev Returns override assignee if set and still a member, otherwise uses rotation
+    function getChoreAssigneeForPeriod(
+        uint256 communeId,
+        uint256 choreId,
+        uint256 period,
+        address[] memory members,
+        IMemberRegistry memberRegistry
+    ) external view returns (address) {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
         // Check if there's an override for this period
         address override_ = choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
-            return override_;
+            // Verify override is still a valid member using O(1) lookup
+            if (memberRegistry.isMember(communeId, override_)) {
+                return override_;
+            }
+            // Override is no longer a member, fall through to rotation
         }
 
         // Use rotation based on period
