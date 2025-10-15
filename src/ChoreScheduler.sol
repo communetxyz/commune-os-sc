@@ -30,6 +30,16 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @dev Maps commune ID => chore ID => period number => assignee address (address(0) means use rotation)
     mapping(uint256 => mapping(uint256 => mapping(uint256 => address))) public choreAssigneeOverrides;
 
+    /// @notice Validates that a chore exists and is not deleted
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID to validate
+    modifier choreExists(uint256 communeId, uint256 choreId) {
+        ChoreSchedule memory schedule = choreScheduleById[communeId][choreId];
+        if (schedule.startTime == 0) revert InvalidChoreId();
+        if (schedule.deleted) revert InvalidChoreId();
+        _;
+    }
+
     /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID
     /// @param schedules Array of chore schedules to add
@@ -66,11 +76,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID to remove
     /// @dev Marks chore as deleted in mapping and removes from array using swap-and-pop
     /// @dev Chore ID remains stable in mapping, preserving completions and overrides
-    function removeChore(uint256 communeId, uint256 choreId) external onlyCommuneOS {
-        // Check chore exists in mapping
-        if (choreScheduleById[communeId][choreId].startTime == 0) revert InvalidChoreId();
-        if (choreScheduleById[communeId][choreId].deleted) revert InvalidChoreId();
-
+    function removeChore(uint256 communeId, uint256 choreId) external onlyCommuneOS choreExists(communeId, choreId) {
         // Mark as deleted in the mapping (preserves ID for historical lookups)
         choreScheduleById[communeId][choreId].deleted = true;
 
@@ -93,11 +99,11 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @param period The period number to mark complete
     /// @dev Marks the specified period as complete
-    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyCommuneOS {
-        ChoreSchedule memory schedule = choreScheduleById[communeId][choreId];
-        if (schedule.startTime == 0) revert InvalidChoreId();
-        if (schedule.deleted) revert InvalidChoreId();
-
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period)
+        external
+        onlyCommuneOS
+        choreExists(communeId, choreId)
+    {
         if (completions[communeId][choreId][period]) revert AlreadyCompleted();
 
         completions[communeId][choreId][period] = true;
@@ -109,10 +115,13 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @return uint256 The current period number
     /// @dev Returns 0 if current time is before startTime, otherwise calculates elapsed periods
-    function getCurrentPeriod(uint256 communeId, uint256 choreId) public view returns (uint256) {
+    function getCurrentPeriod(uint256 communeId, uint256 choreId)
+        public
+        view
+        choreExists(communeId, choreId)
+        returns (uint256)
+    {
         ChoreSchedule memory schedule = choreScheduleById[communeId][choreId];
-        if (schedule.startTime == 0) revert InvalidChoreId();
-        if (schedule.deleted) revert InvalidChoreId();
 
         if (block.timestamp < schedule.startTime) {
             return 0;
@@ -170,10 +179,8 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee)
         external
         onlyCommuneOS
+        choreExists(communeId, choreId)
     {
-        ChoreSchedule memory schedule = choreScheduleById[communeId][choreId];
-        if (schedule.startTime == 0) revert InvalidChoreId();
-        if (schedule.deleted) revert InvalidChoreId();
         choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }
@@ -192,11 +199,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         uint256 period,
         address[] memory members,
         IMemberRegistry memberRegistry
-    ) external view returns (address) {
-        ChoreSchedule memory schedule = choreScheduleById[communeId][choreId];
-        if (schedule.startTime == 0) revert InvalidChoreId();
-        if (schedule.deleted) revert InvalidChoreId();
-
+    ) external view choreExists(communeId, choreId) returns (address) {
         // Check if there's an override for this period
         address override_ = choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
