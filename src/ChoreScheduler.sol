@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {ChoreSchedule} from "./interfaces/IChoreScheduler.sol";
 import "./interfaces/IChoreScheduler.sol";
@@ -17,9 +17,9 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @dev Maps commune ID => chore ID => period number => completion status (true/false)
     mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
 
-    /// @notice Stores manual assignee overrides for specific chores
-    /// @dev Maps commune ID => chore ID => assignee address (address(0) means use rotation)
-    mapping(uint256 => mapping(uint256 => address)) public choreAssigneeOverrides;
+    /// @notice Stores manual assignee overrides for specific chores per period
+    /// @dev Maps commune ID => chore ID => period number => assignee address (address(0) means use rotation)
+    mapping(uint256 => mapping(uint256 => mapping(uint256 => address))) public choreAssigneeOverrides;
 
     /// @notice Add chore schedules for a commune
     /// @param communeId The commune ID
@@ -49,14 +49,14 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         }
     }
 
-    /// @notice Mark a chore as complete for the current period
+    /// @notice Mark a chore as complete for a specific period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
-    /// @dev Automatically calculates the current period and marks it complete
-    function markChoreComplete(uint256 communeId, uint256 choreId) external onlyCommuneOS {
+    /// @param period The period number to mark complete
+    /// @dev Marks the specified period as complete
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyCommuneOS {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
-        uint256 period = getCurrentPeriod(communeId, choreId);
         if (completions[communeId][choreId][period]) revert AlreadyCompleted();
 
         completions[communeId][choreId][period] = true;
@@ -119,13 +119,17 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         return (schedules, periods, completed);
     }
 
-    /// @notice Set an override assignee for a specific chore
+    /// @notice Set an override assignee for a specific chore period
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @param period The period number
     /// @param assignee The member to assign (address(0) to use rotation)
-    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external onlyCommuneOS {
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee)
+        external
+        onlyCommuneOS
+    {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
-        choreAssigneeOverrides[communeId][choreId] = assignee;
+        choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }
 
@@ -134,7 +138,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param choreId The chore ID
     /// @param members Array of commune members
     /// @return address The assigned member
-    /// @dev Returns override assignee if set, otherwise uses rotation based on (choreId + period) % memberCount
+    /// @dev Returns override assignee if set for current period, otherwise uses rotation based on (choreId + period) % memberCount
     function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
         external
         view
@@ -142,27 +146,54 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     {
         if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
 
-        // Check if there's an override
-        address override_ = choreAssigneeOverrides[communeId][choreId];
+        // Get current period
+        uint256 period = getCurrentPeriod(communeId, choreId);
+
+        // Check if there's an override for this period
+        address override_ = choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
             return override_;
         }
 
         // Use rotation based on current period
         if (members.length == 0) revert NoMembers();
-        uint256 period = getCurrentPeriod(communeId, choreId);
+        uint256 memberIndex = (choreId + period) % members.length;
+        return members[memberIndex];
+    }
+
+    /// @notice Get the assigned member for a chore in a specific period
+    /// @param communeId The commune ID
+    /// @param choreId The chore ID
+    /// @param period The period number
+    /// @param members Array of commune members
+    /// @return address The assigned member for that period
+    /// @dev Returns override assignee if set for the period, otherwise uses rotation
+    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
+        external
+        view
+        returns (address)
+    {
+        if (choreId >= choreSchedules[communeId].length) revert InvalidChoreId();
+
+        // Check if there's an override for this period
+        address override_ = choreAssigneeOverrides[communeId][choreId][period];
+        if (override_ != address(0)) {
+            return override_;
+        }
+
+        // Use rotation based on period
+        if (members.length == 0) revert NoMembers();
         uint256 memberIndex = (choreId + period) % members.length;
         return members[memberIndex];
     }
 
     /// @notice Calculate which member index is assigned to a chore in a given period
-    /// @param communeId The commune ID
     /// @param choreId The chore ID
     /// @param period The period number
     /// @param memberCount Total number of members
     /// @return uint256 The index of the assigned member (rotation)
     /// @dev Uses formula: (choreId + period) % memberCount for deterministic rotation
-    function getAssignedMemberIndex(uint256 communeId, uint256 choreId, uint256 period, uint256 memberCount)
+    function getAssignedMemberIndex(uint256 choreId, uint256 period, uint256 memberCount)
         external
         pure
         returns (uint256)

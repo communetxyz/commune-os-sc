@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @title CommuneOSModule
 /// @notice Base contract for all CommuneOS modules with shared access control

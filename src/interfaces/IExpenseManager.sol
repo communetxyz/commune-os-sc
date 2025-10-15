@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @notice Represents a financial expense within a commune
 /// @dev Expenses can be assigned, paid, and disputed
@@ -36,7 +36,6 @@ interface IExpenseManager {
     );
     event ExpensePaid(uint256 indexed expenseId, address indexed paidBy);
     event ExpenseDisputed(uint256 indexed expenseId, uint256 indexed disputeId);
-    event ExpenseReassigned(uint256 indexed expenseId, address indexed oldAssignee, address indexed newAssignee);
 
     // Errors
     error InvalidAssignee();
@@ -44,6 +43,7 @@ interface IExpenseManager {
     error EmptyDescription();
     error InvalidExpenseId();
     error AlreadyPaid();
+    error AlreadyDisputed();
 
     // Functions
     function createExpense(
@@ -57,8 +57,6 @@ interface IExpenseManager {
     function markExpensePaid(uint256 expenseId) external;
 
     function markExpenseDisputed(uint256 expenseId, uint256 disputeId) external;
-
-    function reassignExpense(uint256 expenseId, address newAssignee) external;
 
     function isExpensePaid(uint256 expenseId) external view returns (bool);
 

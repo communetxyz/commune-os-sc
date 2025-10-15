@@ -1,38 +1,35 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "./interfaces/ICommuneOS.sol";
-import "./CommuneRegistry.sol";
-import "./MemberRegistry.sol";
-import "./ChoreScheduler.sol";
-import "./ExpenseManager.sol";
-import "./VotingModule.sol";
-import "./CollateralManager.sol";
+import {DisputeStatus, Dispute} from "./interfaces/IVotingModule.sol";
+import "./CommuneViewer.sol";
 
 /// @title CommuneOS
 /// @notice Main contract integrating all commune management modules
 /// @dev Deployed on Gnosis Chain for low gas fees. Coordinates all module interactions.
-contract CommuneOS is ICommuneOS {
-    /// @notice Registry for commune creation and invite validation
-    CommuneRegistry public communeRegistry;
+contract CommuneOS is CommuneViewer, ICommuneOS {
+    /// @notice Modifier to check if caller is a member of the commune
+    /// @param communeId The commune ID to check membership for
+    modifier onlyMember(uint256 communeId) {
+        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
+        _;
+    }
 
-    /// @notice Registry for commune member management
-    MemberRegistry public memberRegistry;
-
-    /// @notice Scheduler for recurring chore management
-    ChoreScheduler public choreScheduler;
-
-    /// @notice Manager for expense tracking and assignment
-    ExpenseManager public expenseManager;
-
-    /// @notice Voting system for dispute resolution
-    VotingModule public votingModule;
-
-    /// @notice Manager for member collateral deposits and slashing
-    CollateralManager public collateralManager;
+    /// @notice Modifier to check if both caller and another address are members
+    /// @param communeId The commune ID to check membership for
+    /// @param otherAddress The other address to check
+    modifier onlyMembers(uint256 communeId, address otherAddress) {
+        address[] memory addresses = new address[](2);
+        addresses[0] = msg.sender;
+        addresses[1] = otherAddress;
+        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
+        if (!results[0] || !results[1]) revert NotAMember();
+        _;
+    }
 
     /// @notice Initializes CommuneOS with all module contracts
-    /// @param collateralToken Address of ERC20 token for collateral (address(0) for native ETH)
+    /// @param collateralToken Address of ERC20 token for collateral
     /// @dev Creates all module contracts in constructor for atomic deployment
     constructor(address collateralToken) {
         communeRegistry = new CommuneRegistry();
@@ -48,13 +45,15 @@ contract CommuneOS is ICommuneOS {
     /// @param collateralRequired Whether collateral is required
     /// @param collateralAmount The required collateral amount
     /// @param choreSchedules Initial chore schedules
+    /// @param username Username for the creator (optional)
     /// @return communeId The ID of the created commune
     function createCommune(
         string memory name,
         bool collateralRequired,
         uint256 collateralAmount,
-        ChoreSchedule[] memory choreSchedules
-    ) external payable returns (uint256 communeId) {
+        ChoreSchedule[] memory choreSchedules,
+        string memory username
+    ) external returns (uint256 communeId) {
         // Create the commune
         communeId = communeRegistry.createCommune(name, msg.sender, collateralRequired, collateralAmount);
 
@@ -67,11 +66,11 @@ contract CommuneOS is ICommuneOS {
         uint256 depositedCollateral = 0;
         if (collateralRequired) {
             depositedCollateral = collateralAmount;
-            collateralManager.depositCollateral{value: msg.value}(msg.sender, collateralAmount);
+            collateralManager.depositCollateral(msg.sender, collateralAmount);
         }
 
         // Register creator as first member
-        memberRegistry.registerMember(communeId, msg.sender, depositedCollateral);
+        memberRegistry.registerMember(communeId, msg.sender, depositedCollateral, username);
 
         return communeId;
     }
@@ -80,40 +79,41 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param nonce The invite nonce
     /// @param signature The creator's signature
-    /// @dev Validates invite, handles collateral deposit if required, and registers member
-    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature) external payable {
-        // Validate the invite
-        if (!communeRegistry.validateInvite(communeId, nonce, signature)) revert InvalidInvite();
-
+    /// @param username Username for the joining member (optional)
+    /// @dev MemberRegistry handles invite validation, nonce tracking, and registration
+    function joinCommune(uint256 communeId, uint256 nonce, bytes memory signature, string memory username) external {
         // Get commune details
         Commune memory commune = communeRegistry.getCommune(communeId);
+
+        // Validate invite signature with MemberRegistry
+        memberRegistry.validateInvite(communeId, commune.creator, nonce, signature);
 
         // Check collateral requirement and deposit
         uint256 collateralAmount = 0;
         if (commune.collateralRequired) {
             collateralAmount = commune.collateralAmount;
-            collateralManager.depositCollateral{value: msg.value}(msg.sender, collateralAmount);
+            collateralManager.depositCollateral(msg.sender, collateralAmount);
         }
 
-        // Mark nonce as used
-        communeRegistry.markNonceUsed(communeId, nonce);
+        // Register the member via MemberRegistry (which marks nonce as used)
+        memberRegistry.joinCommune(communeId, msg.sender, nonce, collateralAmount, username);
+    }
 
-        // Register the member
-        memberRegistry.registerMember(communeId, msg.sender, collateralAmount);
-
-        emit MemberJoined(msg.sender, communeId, collateralAmount, block.timestamp);
+    /// @notice Add chore schedules to a commune
+    /// @param communeId The commune ID
+    /// @param choreSchedules Array of chore schedules to add
+    /// @dev Caller must be a member of the commune
+    function addChores(uint256 communeId, ChoreSchedule[] memory choreSchedules) external onlyMember(communeId) {
+        choreScheduler.addChores(communeId, choreSchedules);
     }
 
     /// @notice Mark a chore as complete
     /// @param communeId The commune ID
     /// @param choreId The chore ID
+    /// @param period The period number to mark complete
     /// @dev Caller must be a member of the commune
-    function markChoreComplete(uint256 communeId, uint256 choreId) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
-        // Mark chore complete
-        choreScheduler.markChoreComplete(communeId, choreId);
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyMember(communeId) {
+        choreScheduler.markChoreComplete(communeId, choreId, period);
     }
 
     /// @notice Create an expense with direct assignment
@@ -130,17 +130,7 @@ contract CommuneOS is ICommuneOS {
         string memory description,
         uint256 dueDate,
         address assignedTo
-    ) external returns (uint256 expenseId) {
-        // Verify both creator and assignee are members
-        address[] memory addresses = new address[](2);
-        addresses[0] = msg.sender;
-        addresses[1] = assignedTo;
-        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
-
-        if (!results[0]) revert NotAMember();
-        if (!results[1]) revert AssigneeNotAMember();
-
-        // Create expense
+    ) external onlyMembers(communeId, assignedTo) returns (uint256 expenseId) {
         return expenseManager.createExpense(communeId, amount, description, dueDate, assignedTo);
     }
 
@@ -148,10 +138,7 @@ contract CommuneOS is ICommuneOS {
     /// @param communeId The commune ID
     /// @param expenseId The expense ID
     /// @dev Caller must be a member of the commune
-    function markExpensePaid(uint256 communeId, uint256 expenseId) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
+    function markExpensePaid(uint256 communeId, uint256 expenseId) external onlyMember(communeId) {
         expenseManager.markExpensePaid(expenseId);
     }
 
@@ -163,17 +150,9 @@ contract CommuneOS is ICommuneOS {
     /// @dev Both caller and new assignee must be members of the commune
     function disputeExpense(uint256 communeId, uint256 expenseId, address newAssignee)
         external
+        onlyMembers(communeId, newAssignee)
         returns (uint256 disputeId)
     {
-        // Verify both disputer and new assignee are members
-        address[] memory addresses = new address[](2);
-        addresses[0] = msg.sender;
-        addresses[1] = newAssignee;
-        bool[] memory results = memberRegistry.areMembers(communeId, addresses);
-
-        if (!results[0]) revert NotAMember();
-        if (!results[1]) revert NewAssigneeNotAMember();
-
         // Create dispute
         disputeId = votingModule.createDispute(expenseId, newAssignee);
 
@@ -188,68 +167,35 @@ contract CommuneOS is ICommuneOS {
     /// @param disputeId The dispute ID
     /// @param support True to support the dispute
     /// @dev Caller must be a member of the commune. Auto-resolves at 2/3 majority.
-    function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external {
-        // Verify member is part of commune
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
-
+    function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external onlyMember(communeId) {
         // Get total member count for the commune
         uint256 totalMembers = memberRegistry.getMemberCount(communeId);
 
+        // Cast vote
         votingModule.voteOnDispute(disputeId, msg.sender, support, totalMembers);
-    }
 
-    // View functions
+        // Check if dispute was resolved by this vote
+        Dispute memory dispute = votingModule.getDispute(disputeId);
 
-    /// @notice Get commune statistics
-    /// @param communeId The commune ID
-    /// @return commune The commune data
-    /// @return memberCount Number of members
-    /// @return choreCount Number of chore schedules
-    /// @return expenseCount Number of expenses
-    function getCommuneStatistics(uint256 communeId)
-        external
-        view
-        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount)
-    {
-        commune = communeRegistry.getCommune(communeId);
-        memberCount = memberRegistry.getMemberCount(communeId);
-        choreCount = choreScheduler.getChoreSchedules(communeId).length;
-        expenseCount = expenseManager.getCommuneExpenses(communeId).length;
+        if (dispute.status == DisputeStatus.Upheld) {
+            // Get expense details
+            Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
+            address oldAssignee = expense.assignedTo;
+            address newAssignee = dispute.proposedNewAssignee;
 
-        return (commune, memberCount, choreCount, expenseCount);
-    }
+            // Calculate slash amount (min of expense amount and available collateral)
+            uint256 availableCollateral = collateralManager.getCollateralBalance(oldAssignee);
+            uint256 slashAmount = expense.amount < availableCollateral ? expense.amount : availableCollateral;
 
-    /// @notice Get current chores for a commune
-    /// @param communeId The commune ID
-    /// @return schedules Array of schedules
-    /// @return periods Current period for each chore
-    /// @return completed Completion status for current period
-    function getCurrentChores(uint256 communeId)
-        external
-        view
-        returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed)
-    {
-        return choreScheduler.getCurrentChores(communeId);
-    }
+            // Slash collateral and transfer to new assignee if amount > 0
+            if (slashAmount > 0) {
+                collateralManager.slashCollateral(oldAssignee, slashAmount, newAssignee);
+            }
 
-    /// @notice Get all members of a commune
-    /// @param communeId The commune ID
-    /// @return address[] Array of member addresses
-    function getCommuneMembers(uint256 communeId) external view returns (address[] memory) {
-        return memberRegistry.getCommuneMembers(communeId);
-    }
-
-    /// @notice Get all expenses for a commune
-    /// @param communeId The commune ID
-    /// @return Expense[] Array of expenses
-    function getCommuneExpenses(uint256 communeId) external view returns (Expense[] memory) {
-        return expenseManager.getCommuneExpenses(communeId);
-    }
-
-    /// @notice Get member's collateral balance
-    /// @param member The member address
-    /// @return uint256 Collateral balance
-    function getCollateralBalance(address member) external view returns (uint256) {
-        return collateralManager.getCollateralBalance(member);
+            // Create a new expense as a copy for the new assignee
+            expenseManager.createExpense(
+                expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
+            );
+        }
     }
 }

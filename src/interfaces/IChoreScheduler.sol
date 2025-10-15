@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 /// @notice Represents a recurring chore schedule
 /// @dev Chores are period-based with automatic rotation assignment
@@ -34,7 +34,7 @@ interface IChoreScheduler {
     // Functions
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;
 
-    function markChoreComplete(uint256 communeId, uint256 choreId) external;
+    function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external;
 
     function getCurrentPeriod(uint256 communeId, uint256 choreId) external view returns (uint256);
 
@@ -47,14 +47,19 @@ interface IChoreScheduler {
         view
         returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed);
 
-    function setChoreAssignee(uint256 communeId, uint256 choreId, address assignee) external;
+    function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
 
     function getChoreAssignee(uint256 communeId, uint256 choreId, address[] memory members)
         external
         view
         returns (address);
 
-    function getAssignedMemberIndex(uint256 communeId, uint256 choreId, uint256 period, uint256 memberCount)
+    function getChoreAssigneeForPeriod(uint256 communeId, uint256 choreId, uint256 period, address[] memory members)
+        external
+        view
+        returns (address);
+
+    function getAssignedMemberIndex(uint256 choreId, uint256 period, uint256 memberCount)
         external
         pure
         returns (uint256);

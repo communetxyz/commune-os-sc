@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import "../src/CommuneOS.sol";
@@ -8,7 +8,7 @@ import {Commune} from "../src/interfaces/ICommuneRegistry.sol";
 import {Member} from "../src/interfaces/IMemberRegistry.sol";
 import {ChoreSchedule} from "../src/interfaces/IChoreScheduler.sol";
 import {Expense} from "../src/interfaces/IExpenseManager.sol";
-import {Dispute} from "../src/interfaces/IVotingModule.sol";
+import {Dispute, DisputeStatus} from "../src/interfaces/IVotingModule.sol";
 import "./MockERC20.sol";
 
 contract CommuneOSTest is Test {
@@ -25,7 +25,7 @@ contract CommuneOSTest is Test {
     address public member2;
     address public member3;
 
-    uint256 public constant COLLATERAL_AMOUNT = 1 ether;
+    uint256 public constant COLLATERAL_AMOUNT = 3; // Small amount for testnet
 
     function setUp() public {
         token = new MockERC20();
@@ -36,11 +36,11 @@ contract CommuneOSTest is Test {
         member2 = vm.addr(member2PrivateKey);
         member3 = vm.addr(member3PrivateKey);
 
-        // Mint tokens for testing
-        token.mint(creator, 100 ether);
-        token.mint(member1, 100 ether);
-        token.mint(member2, 100 ether);
-        token.mint(member3, 100 ether);
+        // Mint tokens for testing (small amounts)
+        token.mint(creator, 1000);
+        token.mint(member1, 1000);
+        token.mint(member2, 1000);
+        token.mint(member3, 1000);
     }
 
     function testCreateCommune() public {
@@ -53,7 +53,7 @@ contract CommuneOSTest is Test {
 
         // Approve collateral for creator
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
 
         assertEq(communeId, 1); // Commune IDs start at 1
 
@@ -76,7 +76,7 @@ contract CommuneOSTest is Test {
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
 
         // Generate invite signature
         uint256 nonce = 1;
@@ -91,9 +91,9 @@ contract CommuneOSTest is Test {
         // Member joins with collateral
         vm.startPrank(member1);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "alice");
 
-        assertEq(communeOS.getCollateralBalance(member1), COLLATERAL_AMOUNT);
+        assertEq(communeOS.collateralManager().getCollateralBalance(member1), COLLATERAL_AMOUNT);
 
         (, uint256 memberCount,,) = communeOS.getCommuneStatistics(communeId);
         assertEq(memberCount, 2);
@@ -107,14 +107,14 @@ contract CommuneOSTest is Test {
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
         schedules[0] = ChoreSchedule({id: 0, title: "Kitchen Cleaning", frequency: 1 days, startTime: block.timestamp});
 
-        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
-        // Mark chore complete
-        communeOS.markChoreComplete(communeId, 0);
+        // Mark chore complete for period 0
+        communeOS.markChoreComplete(communeId, 0, 0);
 
         // Check completion
         (ChoreSchedule[] memory returnedSchedules, uint256[] memory periods, bool[] memory completed) =
-            communeOS.getCurrentChores(communeId);
+            communeOS.choreScheduler().getCurrentChores(communeId);
 
         assertEq(returnedSchedules.length, 1);
         assertEq(periods[0], 0); // Current period
@@ -127,7 +127,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
         // Generate invite and add member1
         uint256 nonce = 1;
@@ -139,7 +139,7 @@ contract CommuneOSTest is Test {
         vm.stopPrank();
 
         vm.startPrank(member1);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "alice");
         vm.stopPrank();
 
         vm.startPrank(creator);
@@ -150,7 +150,7 @@ contract CommuneOSTest is Test {
 
         assertEq(expenseId, 0);
 
-        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
         assertEq(expenses.length, 1);
         assertEq(expenses[0].amount, 100 ether);
         assertEq(expenses[0].assignedTo, member1);
@@ -163,7 +163,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
-        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
         // Generate invite and add member1
         uint256 nonce = 1;
@@ -175,7 +175,7 @@ contract CommuneOSTest is Test {
         vm.stopPrank();
 
         vm.startPrank(member1);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "bob");
         vm.stopPrank();
 
         vm.startPrank(creator);
@@ -189,7 +189,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(member1);
         communeOS.markExpensePaid(communeId, expenseId);
 
-        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
         assertTrue(expenses[0].paid);
 
         vm.stopPrank();
@@ -200,14 +200,14 @@ contract CommuneOSTest is Test {
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
 
         vm.stopPrank();
 
         // Add members with collateral
-        _addMemberWithCollateral(creator, communeId, member1, 1);
-        _addMemberWithCollateral(creator, communeId, member2, 2);
-        _addMemberWithCollateral(creator, communeId, member3, 3);
+        _addMemberWithCollateral(communeId, member1, 1);
+        _addMemberWithCollateral(communeId, member2, 2);
+        _addMemberWithCollateral(communeId, member3, 3);
 
         // Create expense assigned to member1
         vm.startPrank(creator);
@@ -227,7 +227,7 @@ contract CommuneOSTest is Test {
         // Check dispute is not yet resolved after 1 vote
         Dispute memory disputeAfterVote1 = communeOS.votingModule().getDispute(disputeId);
         assertEq(disputeAfterVote1.votesFor, 1);
-        assertFalse(disputeAfterVote1.resolved);
+        assertTrue(disputeAfterVote1.status == DisputeStatus.Pending);
 
         vm.prank(member2);
         communeOS.voteOnDispute(communeId, disputeId, true);
@@ -238,11 +238,10 @@ contract CommuneOSTest is Test {
         assertEq(dispute.proposedNewAssignee, member3);
         assertEq(dispute.votesFor, 2); // creator and member2 voted for
         assertEq(dispute.votesAgainst, 0);
-        assertTrue(dispute.resolved); // Auto-resolved when 2/3 majority reached
-        assertTrue(dispute.upheld); // Dispute was upheld
+        assertTrue(dispute.status == DisputeStatus.Upheld); // Dispute was upheld
 
         // Verify expense is marked as disputed
-        Expense[] memory expenses = communeOS.getCommuneExpenses(communeId);
+        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
         assertTrue(expenses[0].disputed);
     }
 
@@ -252,24 +251,24 @@ contract CommuneOSTest is Test {
         ChoreSchedule[] memory schedules = new ChoreSchedule[](1);
         schedules[0] = ChoreSchedule({id: 0, title: "Daily Chore", frequency: 1 days, startTime: block.timestamp});
 
-        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
         // Check period 0
-        (, uint256[] memory periods0,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods0,) = communeOS.choreScheduler().getCurrentChores(communeId);
         assertEq(periods0[0], 0);
 
         // Advance time by 1 day
         vm.warp(block.timestamp + 1 days);
 
         // Check period 1
-        (, uint256[] memory periods1,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods1,) = communeOS.choreScheduler().getCurrentChores(communeId);
         assertEq(periods1[0], 1);
 
         // Advance time by 5 more days
         vm.warp(block.timestamp + 5 days);
 
         // Check period 6
-        (, uint256[] memory periods6,) = communeOS.getCurrentChores(communeId);
+        (, uint256[] memory periods6,) = communeOS.choreScheduler().getCurrentChores(communeId);
         assertEq(periods6[0], 6);
 
         vm.stopPrank();
@@ -280,7 +279,7 @@ contract CommuneOSTest is Test {
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules);
+        uint256 communeId = communeOS.createCommune("Test Commune", true, COLLATERAL_AMOUNT, schedules, "creator");
 
         uint256 nonce = 1;
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
@@ -292,16 +291,16 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(member1);
 
-        // Try to join with insufficient collateral (only approve half)
-        token.approve(address(communeOS.collateralManager()), 0.5 ether);
+        // Try to join with insufficient collateral (only approve 1, need 3)
+        token.approve(address(communeOS.collateralManager()), 1);
         vm.expectRevert(); // Will revert on transferFrom due to insufficient approval
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "alice");
 
         vm.stopPrank();
     }
 
     // Helper function to add members with collateral
-    function _addMemberWithCollateral(address _creator, uint256 communeId, address member, uint256 nonce) internal {
+    function _addMemberWithCollateral(uint256 communeId, address member, uint256 nonce) internal {
         bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
         bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
@@ -309,7 +308,7 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(member);
         token.approve(address(communeOS.collateralManager()), COLLATERAL_AMOUNT);
-        communeOS.joinCommune(communeId, nonce, signature);
+        communeOS.joinCommune(communeId, nonce, signature, "");
         vm.stopPrank();
     }
 }

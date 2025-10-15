@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity ^0.8.20;
 
 import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import "./interfaces/ICommuneRegistry.sol";
@@ -132,7 +132,7 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @return v Recovery id (last byte)
     /// @dev Reverts if signature is not exactly 65 bytes
     function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
-        require(sig.length == 65, "Invalid signature length");
+        if (sig.length != 65) revert InvalidSignatureLength();
 
         assembly {
             r := mload(add(sig, 32))
