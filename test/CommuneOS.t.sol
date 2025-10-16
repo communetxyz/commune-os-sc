@@ -158,12 +158,12 @@ contract CommuneOSTest is Test {
         assertEq(tasks.length, 1);
         assertEq(tasks[0].budget, 100 ether);
         assertEq(tasks[0].assignedTo, member1);
-        assertFalse(tasks[0].paid);
+        assertFalse(tasks[0].done);
 
         vm.stopPrank();
     }
 
-    function testMarkTaskPaid() public {
+    function testMarkTaskDone() public {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
@@ -188,12 +188,12 @@ contract CommuneOSTest is Test {
 
         vm.stopPrank();
 
-        // Member1 marks task as paid
+        // Member1 marks task as done
         vm.startPrank(member1);
-        communeOS.markTaskPaid(communeId, taskId);
+        communeOS.markTaskDone(communeId, taskId);
 
         Task[] memory tasks = communeOS.taskManager().getCommuneTasks(communeId);
-        assertTrue(tasks[0].paid);
+        assertTrue(tasks[0].done);
 
         vm.stopPrank();
     }

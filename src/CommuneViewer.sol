@@ -208,16 +208,16 @@ abstract contract CommuneViewer {
     /// @param monthStart Unix timestamp of the start of the month
     /// @param monthEnd Unix timestamp of the end of the month (start of next month)
     /// @return communeId The commune ID the user belongs to
-    /// @return paidTasks Tasks that have been paid (specified month only)
-    /// @return pendingTasks Tasks not paid and not disputed (specified month only)
+    /// @return doneTasks Tasks that have been completed (specified month only)
+    /// @return pendingTasks Tasks not done and not disputed (specified month only)
     /// @return disputedTasks Tasks currently under dispute (specified month only)
-    /// @return overdueTasks Tasks past due date and unpaid (specified month only)
+    /// @return overdueTasks Tasks past due date and not done (specified month only)
     function getCommuneTasks(address user, uint256 monthStart, uint256 monthEnd)
         external
         view
         returns (
             uint256 communeId,
-            Task[] memory paidTasks,
+            Task[] memory doneTasks,
             Task[] memory pendingTasks,
             Task[] memory disputedTasks,
             Task[] memory overdueTasks
@@ -227,7 +227,7 @@ abstract contract CommuneViewer {
         communeId = memberRegistry.memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
-        (paidTasks, pendingTasks, disputedTasks, overdueTasks) = _getMonthTasks(communeId, monthStart, monthEnd);
+        (doneTasks, pendingTasks, disputedTasks, overdueTasks) = _getMonthTasks(communeId, monthStart, monthEnd);
     }
 
     /// @notice Get tasks for specified month only, categorized by status
@@ -235,7 +235,7 @@ abstract contract CommuneViewer {
         internal
         view
         returns (
-            Task[] memory paidTasks,
+            Task[] memory doneTasks,
             Task[] memory pendingTasks,
             Task[] memory disputedTasks,
             Task[] memory overdueTasks
@@ -244,12 +244,12 @@ abstract contract CommuneViewer {
         Task[] memory allTasks = taskManager.getCommuneTasks(communeId);
 
         // Allocate arrays with max size (will have empty slots at end)
-        paidTasks = new Task[](allTasks.length);
+        doneTasks = new Task[](allTasks.length);
         pendingTasks = new Task[](allTasks.length);
         disputedTasks = new Task[](allTasks.length);
         overdueTasks = new Task[](allTasks.length);
 
-        uint256[4] memory indices; // [paid, pending, disputed, overdue]
+        uint256[4] memory indices; // [done, pending, disputed, overdue]
 
         for (uint256 i = 0; i < allTasks.length; i++) {
             Task memory task = allTasks[i];
@@ -259,8 +259,8 @@ abstract contract CommuneViewer {
                 continue;
             }
 
-            if (taskManager.isTaskPaid(task.id)) {
-                paidTasks[indices[0]++] = task;
+            if (taskManager.isTaskDone(task.id)) {
+                doneTasks[indices[0]++] = task;
             } else if (task.disputed) {
                 disputedTasks[indices[2]++] = task;
             } else if (block.timestamp > task.dueDate) {
@@ -270,7 +270,7 @@ abstract contract CommuneViewer {
             }
         }
 
-        return (paidTasks, pendingTasks, disputedTasks, overdueTasks);
+        return (doneTasks, pendingTasks, disputedTasks, overdueTasks);
     }
 
     /// @notice Get all disputes for a commune's tasks

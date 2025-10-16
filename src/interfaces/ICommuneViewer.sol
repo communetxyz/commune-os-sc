@@ -57,7 +57,7 @@ interface ICommuneViewer {
         view
         returns (
             uint256 communeId,
-            Task[] memory paidTasks,
+            Task[] memory doneTasks,
             Task[] memory pendingTasks,
             Task[] memory disputedTasks,
             Task[] memory overdueTasks

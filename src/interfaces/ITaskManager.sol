@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 /// @notice Represents a task within a commune
-/// @dev Tasks can be assigned, paid, and disputed
+/// @dev Tasks can be assigned, completed, and disputed
 struct Task {
     /// @notice Global unique identifier for the task
     uint256 id;
@@ -16,8 +16,8 @@ struct Task {
     address assignedTo;
     /// @notice Unix timestamp when completion is due
     uint256 dueDate;
-    /// @notice Whether the task has been paid
-    bool paid;
+    /// @notice Whether the task has been completed
+    bool done;
     /// @notice Whether the task assignment is being disputed
     bool disputed;
 }
@@ -34,14 +34,14 @@ interface ITaskManager {
         string description,
         uint256 dueDate
     );
-    event TaskPaid(uint256 indexed taskId, address indexed paidBy);
+    event TaskDone(uint256 indexed taskId, address indexed completedBy);
     event TaskDisputed(uint256 indexed taskId, uint256 indexed disputeId);
 
     // Errors
     error InvalidAssignee();
     error EmptyDescription();
     error InvalidTaskId();
-    error AlreadyPaid();
+    error AlreadyDone();
     error AlreadyDisputed();
 
     // Functions
@@ -53,11 +53,11 @@ interface ITaskManager {
         address assignedTo
     ) external returns (uint256 taskId);
 
-    function markTaskPaid(uint256 taskId) external;
+    function markTaskDone(uint256 taskId) external;
 
     function markTaskDisputed(uint256 taskId, uint256 disputeId) external;
 
-    function isTaskPaid(uint256 taskId) external view returns (bool);
+    function isTaskDone(uint256 taskId) external view returns (bool);
 
     function getTaskStatus(uint256 taskId) external view returns (Task memory);
 

@@ -31,7 +31,7 @@ interface ICommuneOS {
         address assignedTo
     ) external returns (uint256 taskId);
 
-    function markTaskPaid(uint256 communeId, uint256 taskId) external;
+    function markTaskDone(uint256 communeId, uint256 taskId) external;
 
     function disputeTask(uint256 communeId, uint256 taskId, address newAssignee) external returns (uint256 disputeId);
 

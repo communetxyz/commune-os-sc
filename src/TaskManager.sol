@@ -6,8 +6,8 @@ import "./interfaces/ITaskManager.sol";
 import "./CommuneOSModule.sol";
 
 /// @title TaskManager
-/// @notice Manages task lifecycle including creation, assignment, payments, and disputes
-/// @dev Tasks are globally unique and can be assigned, paid, disputed, and reassigned
+/// @notice Manages task lifecycle including creation, assignment, completion, and disputes
+/// @dev Tasks are globally unique and can be assigned, completed, disputed, and reassigned
 contract TaskManager is CommuneOSModule, ITaskManager {
     /// @notice Stores task data by globally unique task ID
     /// @dev Maps task ID => Task struct containing all task information
@@ -46,7 +46,7 @@ contract TaskManager is CommuneOSModule, ITaskManager {
             description: description,
             assignedTo: assignedTo,
             dueDate: dueDate,
-            paid: false,
+            done: false,
             disputed: false
         });
 
@@ -54,15 +54,15 @@ contract TaskManager is CommuneOSModule, ITaskManager {
         return taskId;
     }
 
-    /// @notice Mark a task as paid
+    /// @notice Mark a task as done
     /// @param taskId The task ID
-    function markTaskPaid(uint256 taskId) external onlyCommuneOS {
+    function markTaskDone(uint256 taskId) external onlyCommuneOS {
         if (taskId >= taskCount) revert InvalidTaskId();
-        if (tasks[taskId].paid) revert AlreadyPaid();
+        if (tasks[taskId].done) revert AlreadyDone();
 
-        tasks[taskId].paid = true;
+        tasks[taskId].done = true;
 
-        emit TaskPaid(taskId, msg.sender);
+        emit TaskDone(taskId, msg.sender);
     }
 
     /// @notice Mark a task as disputed
@@ -79,12 +79,12 @@ contract TaskManager is CommuneOSModule, ITaskManager {
         emit TaskDisputed(taskId, disputeId);
     }
 
-    /// @notice Check if a task is paid
+    /// @notice Check if a task is done
     /// @param taskId The task ID
-    /// @return bool True if paid
-    function isTaskPaid(uint256 taskId) external view returns (bool) {
+    /// @return bool True if done
+    function isTaskDone(uint256 taskId) external view returns (bool) {
         if (taskId >= taskCount) revert InvalidTaskId();
-        return tasks[taskId].paid;
+        return tasks[taskId].done;
     }
 
     /// @notice Get task status

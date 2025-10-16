@@ -142,12 +142,12 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         return taskManager.createTask(communeId, budget, description, dueDate, assignedTo);
     }
 
-    /// @notice Mark a task as paid
+    /// @notice Mark a task as done
     /// @param communeId The commune ID
     /// @param taskId The task ID
     /// @dev Caller must be a member of the commune
-    function markTaskPaid(uint256 communeId, uint256 taskId) external onlyMember(communeId) {
-        taskManager.markTaskPaid(taskId);
+    function markTaskDone(uint256 communeId, uint256 taskId) external onlyMember(communeId) {
+        taskManager.markTaskDone(taskId);
     }
 
     /// @notice Dispute a task

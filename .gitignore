@@ -13,6 +13,9 @@ docs/
 # Dotenv file
 .env
 
+# Foundry lock file
+foundry.lock
+
 # Generated invites (contain sensitive signatures)
 invites/*
 !invites/.gitkeep
