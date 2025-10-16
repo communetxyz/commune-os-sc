@@ -23,17 +23,17 @@ interface ICommuneOS {
 
     function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external;
 
-    function createExpense(
+    function createTask(
         uint256 communeId,
-        uint256 amount,
+        uint256 budget,
         string memory description,
         uint256 dueDate,
         address assignedTo
-    ) external returns (uint256 expenseId);
+    ) external returns (uint256 taskId);
 
-    function markExpensePaid(uint256 communeId, uint256 expenseId) external;
+    function markTaskPaid(uint256 communeId, uint256 taskId) external;
 
-    function disputeExpense(uint256 communeId, uint256 expenseId, address newAssignee)
+    function disputeTask(uint256 communeId, uint256 taskId, address newAssignee)
         external
         returns (uint256 disputeId);
 

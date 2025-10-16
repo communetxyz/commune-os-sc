@@ -8,11 +8,11 @@ enum DisputeStatus {
     Rejected // Dispute rejected, no changes
 }
 
-/// @notice Represents a dispute over an expense assignment
+/// @notice Represents a dispute over a task assignment
 /// @dev Disputes auto-resolve when 2/3 majority is reached
 struct Dispute {
-    /// @notice ID of the expense being disputed
-    uint256 expenseId;
+    /// @notice ID of the task being disputed
+    uint256 taskId;
     /// @notice Address proposed as the new assignee if dispute is upheld
     address proposedNewAssignee;
     /// @notice Number of votes in favor of the dispute
@@ -24,10 +24,10 @@ struct Dispute {
 }
 
 /// @title IVotingModule
-/// @notice Interface for managing voting on expense disputes
+/// @notice Interface for managing voting on task disputes
 interface IVotingModule {
     // Events
-    event DisputeCreated(uint256 indexed disputeId, uint256 indexed expenseId, address proposedNewAssignee);
+    event DisputeCreated(uint256 indexed disputeId, uint256 indexed taskId, address proposedNewAssignee);
     event VoteCast(uint256 indexed disputeId, address indexed voter, bool support);
     event DisputeResolved(uint256 indexed disputeId, bool upheld);
 
@@ -38,7 +38,7 @@ interface IVotingModule {
     error AlreadyVoted();
 
     // Functions
-    function createDispute(uint256 expenseId, address proposedNewAssignee) external returns (uint256 disputeId);
+    function createDispute(uint256 taskId, address proposedNewAssignee) external returns (uint256 disputeId);
 
     function voteOnDispute(uint256 disputeId, address voter, bool support, uint256 totalMembers) external;
 

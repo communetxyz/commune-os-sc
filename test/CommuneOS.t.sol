@@ -7,7 +7,7 @@ import "../src/interfaces/ICommuneOS.sol";
 import {Commune} from "../src/interfaces/ICommuneRegistry.sol";
 import {Member} from "../src/interfaces/IMemberRegistry.sol";
 import {ChoreSchedule} from "../src/interfaces/IChoreScheduler.sol";
-import {Expense} from "../src/interfaces/IExpenseManager.sol";
+import {Task} from "../src/interfaces/ITaskManager.sol";
 import {Dispute, DisputeStatus} from "../src/interfaces/IVotingModule.sol";
 import "./MockERC20.sol";
 
@@ -60,7 +60,7 @@ contract CommuneOSTest is Test {
 
         assertEq(communeId, 1); // Commune IDs start at 1
 
-        (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount) =
+        (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 taskCount) =
             communeOS.getCommuneStatistics(communeId);
 
         assertEq(commune.name, "Test Commune");
@@ -69,7 +69,7 @@ contract CommuneOSTest is Test {
         assertEq(commune.collateralAmount, COLLATERAL_AMOUNT);
         assertEq(memberCount, 1); // Creator is first member
         assertEq(choreCount, 2);
-        assertEq(expenseCount, 0);
+        assertEq(taskCount, 0);
 
         vm.stopPrank();
     }
@@ -128,7 +128,7 @@ contract CommuneOSTest is Test {
         vm.stopPrank();
     }
 
-    function testCreateExpense() public {
+    function testCreateTask() public {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
@@ -149,22 +149,22 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(creator);
 
-        // Create expense assigned to member1
-        uint256 expenseId =
-            communeOS.createExpense(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
+        // Create task assigned to member1
+        uint256 taskId =
+            communeOS.createTask(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
 
-        assertEq(expenseId, 0);
+        assertEq(taskId, 0);
 
-        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
-        assertEq(expenses.length, 1);
-        assertEq(expenses[0].amount, 100 ether);
-        assertEq(expenses[0].assignedTo, member1);
-        assertFalse(expenses[0].paid);
+        Task[] memory tasks = communeOS.taskManager().getCommuneTasks(communeId);
+        assertEq(tasks.length, 1);
+        assertEq(tasks[0].budget, 100 ether);
+        assertEq(tasks[0].assignedTo, member1);
+        assertFalse(tasks[0].paid);
 
         vm.stopPrank();
     }
 
-    function testMarkExpensePaid() public {
+    function testMarkTaskPaid() public {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
@@ -185,22 +185,22 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(creator);
 
-        uint256 expenseId =
-            communeOS.createExpense(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
+        uint256 taskId =
+            communeOS.createTask(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
 
         vm.stopPrank();
 
-        // Member1 marks expense as paid
+        // Member1 marks task as paid
         vm.startPrank(member1);
-        communeOS.markExpensePaid(communeId, expenseId);
+        communeOS.markTaskPaid(communeId, taskId);
 
-        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
-        assertTrue(expenses[0].paid);
+        Task[] memory tasks = communeOS.taskManager().getCommuneTasks(communeId);
+        assertTrue(tasks[0].paid);
 
         vm.stopPrank();
     }
 
-    function testDisputeExpenseFlow() public {
+    function testDisputeTaskFlow() public {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
@@ -214,15 +214,15 @@ contract CommuneOSTest is Test {
         _addMemberWithCollateral(communeId, member2, 2);
         _addMemberWithCollateral(communeId, member3, 3);
 
-        // Create expense assigned to member1
+        // Create task assigned to member1
         vm.startPrank(creator);
-        uint256 expenseId =
-            communeOS.createExpense(communeId, 0.5 ether, "Utilities", block.timestamp + 7 days, member1);
+        uint256 taskId =
+            communeOS.createTask(communeId, 0.5 ether, "Utilities", block.timestamp + 7 days, member1);
         vm.stopPrank();
 
-        // Member2 disputes the expense, proposing member3 as new assignee
+        // Member2 disputes the task, proposing member3 as new assignee
         vm.startPrank(member2);
-        uint256 disputeId = communeOS.disputeExpense(communeId, expenseId, member3);
+        uint256 disputeId = communeOS.disputeTask(communeId, taskId, member3);
         vm.stopPrank();
 
         // Members vote on dispute - need 2/3 majority (4 members total, so 2 votes needed)
@@ -239,15 +239,15 @@ contract CommuneOSTest is Test {
 
         // After 2nd vote, 2/3 majority is reached and dispute auto-resolves
         Dispute memory dispute = communeOS.votingModule().getDispute(disputeId);
-        assertEq(dispute.expenseId, expenseId);
+        assertEq(dispute.taskId, taskId);
         assertEq(dispute.proposedNewAssignee, member3);
         assertEq(dispute.votesFor, 2); // creator and member2 voted for
         assertEq(dispute.votesAgainst, 0);
         assertTrue(dispute.status == DisputeStatus.Upheld); // Dispute was upheld
 
-        // Verify expense is marked as disputed
-        Expense[] memory expenses = communeOS.expenseManager().getCommuneExpenses(communeId);
-        assertTrue(expenses[0].disputed);
+        // Verify task is marked as disputed
+        Task[] memory tasks = communeOS.taskManager().getCommuneTasks(communeId);
+        assertTrue(tasks[0].disputed);
     }
 
     function testChoreSchedulePeriodCalculation() public {

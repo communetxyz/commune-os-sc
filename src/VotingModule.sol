@@ -6,7 +6,7 @@ import "./interfaces/IVotingModule.sol";
 import "./CommuneOSModule.sol";
 
 /// @title VotingModule
-/// @notice Manages voting on expense disputes with automatic 2/3 majority resolution
+/// @notice Manages voting on task disputes with automatic 2/3 majority resolution
 /// @dev Disputes auto-resolve when either votesFor or votesAgainst reaches 2/3 of total members
 contract VotingModule is CommuneOSModule, IVotingModule {
     /// @notice Stores dispute data by dispute ID
@@ -24,11 +24,11 @@ contract VotingModule is CommuneOSModule, IVotingModule {
     /// @notice Total number of disputes created (also serves as next dispute ID)
     uint256 public disputeCount;
 
-    /// @notice Create a new dispute for an expense
-    /// @param expenseId The expense being disputed
+    /// @notice Create a new dispute for a task
+    /// @param taskId The task being disputed
     /// @param proposedNewAssignee The proposed new assignee
     /// @return disputeId The ID of the created dispute
-    function createDispute(uint256 expenseId, address proposedNewAssignee)
+    function createDispute(uint256 taskId, address proposedNewAssignee)
         external
         onlyCommuneOS
         returns (uint256 disputeId)
@@ -38,14 +38,14 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         disputeId = disputeCount++;
 
         disputes[disputeId] = Dispute({
-            expenseId: expenseId,
+            taskId: taskId,
             proposedNewAssignee: proposedNewAssignee,
             votesFor: 0,
             votesAgainst: 0,
             status: DisputeStatus.Pending
         });
 
-        emit DisputeCreated(disputeId, expenseId, proposedNewAssignee);
+        emit DisputeCreated(disputeId, taskId, proposedNewAssignee);
         return disputeId;
     }
 

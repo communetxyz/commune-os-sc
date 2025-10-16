@@ -4,12 +4,12 @@ pragma solidity ^0.8.20;
 import {ChoreInstance} from "./interfaces/ICommuneViewer.sol";
 import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import {ChoreSchedule} from "./interfaces/IChoreScheduler.sol";
-import {Expense} from "./interfaces/IExpenseManager.sol";
+import {Task} from "./interfaces/ITaskManager.sol";
 import {Dispute} from "./interfaces/IVotingModule.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
-import "./ExpenseManager.sol";
+import "./TaskManager.sol";
 import "./VotingModule.sol";
 import "./CollateralManager.sol";
 
@@ -26,8 +26,8 @@ abstract contract CommuneViewer {
     /// @notice Scheduler for recurring chore management
     ChoreScheduler public choreScheduler;
 
-    /// @notice Manager for expense tracking and assignment
-    ExpenseManager public expenseManager;
+    /// @notice Manager for task tracking and assignment
+    TaskManager public taskManager;
 
     /// @notice Voting system for dispute resolution
     VotingModule public votingModule;
@@ -40,18 +40,18 @@ abstract contract CommuneViewer {
     /// @return commune The commune data
     /// @return memberCount Number of members
     /// @return choreCount Number of chore schedules
-    /// @return expenseCount Number of expenses
+    /// @return taskCount Number of tasks
     function getCommuneStatistics(uint256 communeId)
         external
         view
-        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount)
+        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 taskCount)
     {
         commune = communeRegistry.getCommune(communeId);
         memberCount = memberRegistry.getMemberCount(communeId);
         choreCount = choreScheduler.getChoreSchedules(communeId).length;
-        expenseCount = expenseManager.getCommuneExpenses(communeId).length;
+        taskCount = taskManager.getCommuneTasks(communeId).length;
 
-        return (commune, memberCount, choreCount, expenseCount);
+        return (commune, memberCount, choreCount, taskCount);
     }
 
     /// @notice Get current chores for a commune
@@ -74,11 +74,11 @@ abstract contract CommuneViewer {
         return memberRegistry.getCommuneMembers(communeId);
     }
 
-    /// @notice Get all expenses for a commune
+    /// @notice Get all tasks for a commune
     /// @param communeId The commune ID
-    /// @return Expense[] Array of expenses
-    function getCommuneExpenses(uint256 communeId) external view returns (Expense[] memory) {
-        return expenseManager.getCommuneExpenses(communeId);
+    /// @return Task[] Array of tasks
+    function getCommuneTasks(uint256 communeId) external view returns (Task[] memory) {
+        return taskManager.getCommuneTasks(communeId);
     }
 
     /// @notice Get member's collateral balance
@@ -203,87 +203,87 @@ abstract contract CommuneViewer {
         return count;
     }
 
-    /// @notice Get expenses for a specific month, categorized by status for a user's commune
+    /// @notice Get tasks for a specific month, categorized by status for a user's commune
     /// @param user The user address to find commune for
     /// @param monthStart Unix timestamp of the start of the month
     /// @param monthEnd Unix timestamp of the end of the month (start of next month)
     /// @return communeId The commune ID the user belongs to
-    /// @return paidExpenses Expenses that have been paid (specified month only)
-    /// @return pendingExpenses Expenses not paid and not disputed (specified month only)
-    /// @return disputedExpenses Expenses currently under dispute (specified month only)
-    /// @return overdueExpenses Expenses past due date and unpaid (specified month only)
-    function getCommuneExpenses(address user, uint256 monthStart, uint256 monthEnd)
+    /// @return paidTasks Tasks that have been paid (specified month only)
+    /// @return pendingTasks Tasks not paid and not disputed (specified month only)
+    /// @return disputedTasks Tasks currently under dispute (specified month only)
+    /// @return overdueTasks Tasks past due date and unpaid (specified month only)
+    function getCommuneTasks(address user, uint256 monthStart, uint256 monthEnd)
         external
         view
         returns (
             uint256 communeId,
-            Expense[] memory paidExpenses,
-            Expense[] memory pendingExpenses,
-            Expense[] memory disputedExpenses,
-            Expense[] memory overdueExpenses
+            Task[] memory paidTasks,
+            Task[] memory pendingTasks,
+            Task[] memory disputedTasks,
+            Task[] memory overdueTasks
         )
     {
         // Get the commune this user belongs to
         communeId = memberRegistry.memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
-        (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses) =
-            _getMonthExpenses(communeId, monthStart, monthEnd);
+        (paidTasks, pendingTasks, disputedTasks, overdueTasks) =
+            _getMonthTasks(communeId, monthStart, monthEnd);
     }
 
-    /// @notice Get expenses for specified month only, categorized by status
-    function _getMonthExpenses(uint256 communeId, uint256 monthStart, uint256 monthEnd)
+    /// @notice Get tasks for specified month only, categorized by status
+    function _getMonthTasks(uint256 communeId, uint256 monthStart, uint256 monthEnd)
         internal
         view
         returns (
-            Expense[] memory paidExpenses,
-            Expense[] memory pendingExpenses,
-            Expense[] memory disputedExpenses,
-            Expense[] memory overdueExpenses
+            Task[] memory paidTasks,
+            Task[] memory pendingTasks,
+            Task[] memory disputedTasks,
+            Task[] memory overdueTasks
         )
     {
-        Expense[] memory allExpenses = expenseManager.getCommuneExpenses(communeId);
+        Task[] memory allTasks = taskManager.getCommuneTasks(communeId);
 
         // Allocate arrays with max size (will have empty slots at end)
-        paidExpenses = new Expense[](allExpenses.length);
-        pendingExpenses = new Expense[](allExpenses.length);
-        disputedExpenses = new Expense[](allExpenses.length);
-        overdueExpenses = new Expense[](allExpenses.length);
+        paidTasks = new Task[](allTasks.length);
+        pendingTasks = new Task[](allTasks.length);
+        disputedTasks = new Task[](allTasks.length);
+        overdueTasks = new Task[](allTasks.length);
 
         uint256[4] memory indices; // [paid, pending, disputed, overdue]
 
-        for (uint256 i = 0; i < allExpenses.length; i++) {
-            Expense memory expense = allExpenses[i];
+        for (uint256 i = 0; i < allTasks.length; i++) {
+            Task memory task = allTasks[i];
 
-            // Only include expenses with due date in specified month
-            if (expense.dueDate < monthStart || expense.dueDate >= monthEnd) {
+            // Only include tasks with due date in specified month
+            if (task.dueDate < monthStart || task.dueDate >= monthEnd) {
                 continue;
             }
 
-            if (expenseManager.isExpensePaid(expense.id)) {
-                paidExpenses[indices[0]++] = expense;
-            } else if (expense.disputed) {
-                disputedExpenses[indices[2]++] = expense;
-            } else if (block.timestamp > expense.dueDate) {
-                overdueExpenses[indices[3]++] = expense;
+            if (taskManager.isTaskPaid(task.id)) {
+                paidTasks[indices[0]++] = task;
+            } else if (task.disputed) {
+                disputedTasks[indices[2]++] = task;
+            } else if (block.timestamp > task.dueDate) {
+                overdueTasks[indices[3]++] = task;
             } else {
-                pendingExpenses[indices[1]++] = expense;
+                pendingTasks[indices[1]++] = task;
             }
         }
 
-        return (paidExpenses, pendingExpenses, disputedExpenses, overdueExpenses);
+        return (paidTasks, pendingTasks, disputedTasks, overdueTasks);
     }
 
-    /// @notice Get all disputes for a commune's expenses
+    /// @notice Get all disputes for a commune's tasks
     /// @param communeId The commune ID
-    /// @return disputes Array of disputes related to commune expenses
+    /// @return disputes Array of disputes related to commune tasks
     function getCommuneDisputes(uint256 communeId) external view returns (Dispute[] memory disputes) {
-        Expense[] memory expenses = expenseManager.getCommuneExpenses(communeId);
+        Task[] memory tasks = taskManager.getCommuneTasks(communeId);
 
-        // Count disputed expenses
+        // Count disputed tasks
         uint256 disputeCount = 0;
-        for (uint256 i = 0; i < expenses.length; i++) {
-            if (expenses[i].disputed) {
+        for (uint256 i = 0; i < tasks.length; i++) {
+            if (tasks[i].disputed) {
                 disputeCount++;
             }
         }
@@ -292,14 +292,14 @@ abstract contract CommuneViewer {
         disputes = new Dispute[](disputeCount);
         uint256 index = 0;
 
-        // Try to get dispute for each expense ID
-        for (uint256 i = 0; i < expenses.length; i++) {
-            if (expenses[i].disputed && index < disputeCount) {
+        // Try to get dispute for each task ID
+        for (uint256 i = 0; i < tasks.length; i++) {
+            if (tasks[i].disputed && index < disputeCount) {
                 // Search for the dispute by trying sequential IDs
-                // This is a workaround since we don't have expense->dispute mapping
+                // This is a workaround since we don't have task->dispute mapping
                 for (uint256 disputeId = 1; disputeId <= 1000; disputeId++) {
                     try votingModule.getDispute(disputeId) returns (Dispute memory dispute) {
-                        if (dispute.expenseId == expenses[i].id) {
+                        if (dispute.taskId == tasks[i].id) {
                             disputes[index] = dispute;
                             index++;
                             break;

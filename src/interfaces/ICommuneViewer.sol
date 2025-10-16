@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import {Commune} from "./ICommuneRegistry.sol";
 import {ChoreSchedule} from "./IChoreScheduler.sol";
-import {Expense} from "./IExpenseManager.sol";
+import {Task} from "./ITaskManager.sol";
 import {Dispute} from "./IVotingModule.sol";
 
 /// @notice Individual chore instance for frontend
@@ -23,7 +23,7 @@ interface ICommuneViewer {
     function getCommuneStatistics(uint256 communeId)
         external
         view
-        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 expenseCount);
+        returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 taskCount);
 
     function getCurrentChores(uint256 communeId)
         external
@@ -32,7 +32,7 @@ interface ICommuneViewer {
 
     function getCommuneMembers(uint256 communeId) external view returns (address[] memory);
 
-    function getCommuneExpenses(uint256 communeId) external view returns (Expense[] memory);
+    function getCommuneTasks(uint256 communeId) external view returns (Task[] memory);
 
     function getCollateralBalance(address member) external view returns (uint256);
 
@@ -52,15 +52,15 @@ interface ICommuneViewer {
         view
         returns (uint256 communeId, ChoreInstance[] memory instances);
 
-    function getCommuneExpenses(address user, uint256 monthStart, uint256 monthEnd)
+    function getCommuneTasks(address user, uint256 monthStart, uint256 monthEnd)
         external
         view
         returns (
             uint256 communeId,
-            Expense[] memory paidExpenses,
-            Expense[] memory pendingExpenses,
-            Expense[] memory disputedExpenses,
-            Expense[] memory overdueExpenses
+            Task[] memory paidTasks,
+            Task[] memory pendingTasks,
+            Task[] memory disputedTasks,
+            Task[] memory overdueTasks
         );
 
     function getCommuneDisputes(uint256 communeId) external view returns (Dispute[] memory disputes);
