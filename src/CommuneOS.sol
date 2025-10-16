@@ -201,9 +201,7 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
             }
 
             // Create a new task as a copy for the new assignee
-            taskManager.createTask(
-                task.communeId, task.budget, task.description, task.dueDate, newAssignee
-            );
+            taskManager.createTask(task.communeId, task.budget, task.description, task.dueDate, newAssignee);
         }
     }
 

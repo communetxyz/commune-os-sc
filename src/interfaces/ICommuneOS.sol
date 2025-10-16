@@ -33,9 +33,7 @@ interface ICommuneOS {
 
     function markTaskPaid(uint256 communeId, uint256 taskId) external;
 
-    function disputeTask(uint256 communeId, uint256 taskId, address newAssignee)
-        external
-        returns (uint256 disputeId);
+    function disputeTask(uint256 communeId, uint256 taskId, address newAssignee) external returns (uint256 disputeId);
 
     function voteOnDispute(uint256 communeId, uint256 disputeId, bool support) external;
 

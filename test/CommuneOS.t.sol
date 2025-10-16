@@ -150,8 +150,7 @@ contract CommuneOSTest is Test {
         vm.startPrank(creator);
 
         // Create task assigned to member1
-        uint256 taskId =
-            communeOS.createTask(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
+        uint256 taskId = communeOS.createTask(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
 
         assertEq(taskId, 0);
 
@@ -185,8 +184,7 @@ contract CommuneOSTest is Test {
 
         vm.startPrank(creator);
 
-        uint256 taskId =
-            communeOS.createTask(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
+        uint256 taskId = communeOS.createTask(communeId, 100 ether, "Groceries", block.timestamp + 7 days, member1);
 
         vm.stopPrank();
 
@@ -216,8 +214,7 @@ contract CommuneOSTest is Test {
 
         // Create task assigned to member1
         vm.startPrank(creator);
-        uint256 taskId =
-            communeOS.createTask(communeId, 0.5 ether, "Utilities", block.timestamp + 7 days, member1);
+        uint256 taskId = communeOS.createTask(communeId, 0.5 ether, "Utilities", block.timestamp + 7 days, member1);
         vm.stopPrank();
 
         // Member2 disputes the task, proposing member3 as new assignee

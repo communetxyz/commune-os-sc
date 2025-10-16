@@ -227,8 +227,7 @@ abstract contract CommuneViewer {
         communeId = memberRegistry.memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
-        (paidTasks, pendingTasks, disputedTasks, overdueTasks) =
-            _getMonthTasks(communeId, monthStart, monthEnd);
+        (paidTasks, pendingTasks, disputedTasks, overdueTasks) = _getMonthTasks(communeId, monthStart, monthEnd);
     }
 
     /// @notice Get tasks for specified month only, categorized by status
