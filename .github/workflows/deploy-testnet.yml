@@ -57,7 +57,7 @@ jobs:
           COMMUNE_REGISTRY=$(echo "$DEPLOY_OUTPUT" | grep "^  CommuneRegistry:" | awk '{print $NF}')
           MEMBER_REGISTRY=$(echo "$DEPLOY_OUTPUT" | grep "^  MemberRegistry:" | awk '{print $NF}')
           CHORE_SCHEDULER=$(echo "$DEPLOY_OUTPUT" | grep "^  ChoreScheduler:" | awk '{print $NF}')
-          EXPENSE_MANAGER=$(echo "$DEPLOY_OUTPUT" | grep "^  ExpenseManager:" | awk '{print $NF}')
+          TASK_MANAGER=$(echo "$DEPLOY_OUTPUT" | grep "^  TaskManager:" | awk '{print $NF}')
           VOTING_MODULE=$(echo "$DEPLOY_OUTPUT" | grep "^  VotingModule:" | awk '{print $NF}')
           COLLATERAL_MANAGER=$(echo "$DEPLOY_OUTPUT" | grep "^  CollateralManager:" | awk '{print $NF}')
 
@@ -65,7 +65,7 @@ jobs:
           echo "commune_registry=$COMMUNE_REGISTRY" >> $GITHUB_OUTPUT
           echo "member_registry=$MEMBER_REGISTRY" >> $GITHUB_OUTPUT
           echo "chore_scheduler=$CHORE_SCHEDULER" >> $GITHUB_OUTPUT
-          echo "expense_manager=$EXPENSE_MANAGER" >> $GITHUB_OUTPUT
+          echo "task_manager=$TASK_MANAGER" >> $GITHUB_OUTPUT
           echo "voting_module=$VOTING_MODULE" >> $GITHUB_OUTPUT
           echo "collateral_manager=$COLLATERAL_MANAGER" >> $GITHUB_OUTPUT
 
@@ -107,7 +107,7 @@ jobs:
           sleep 10
 
           # Verify module contracts (no constructor args)
-          for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "ExpenseManager" "VotingModule"; do
+          for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "TaskManager" "VotingModule"; do
             echo "Verifying $contract..."
 
             # Get the address from outputs
@@ -117,8 +117,8 @@ jobs:
               ADDRESS="${{ steps.deploy.outputs.member_registry }}"
             elif [ "$contract" = "ChoreScheduler" ]; then
               ADDRESS="${{ steps.deploy.outputs.chore_scheduler }}"
-            elif [ "$contract" = "ExpenseManager" ]; then
-              ADDRESS="${{ steps.deploy.outputs.expense_manager }}"
+            elif [ "$contract" = "TaskManager" ]; then
+              ADDRESS="${{ steps.deploy.outputs.task_manager }}"
             elif [ "$contract" = "VotingModule" ]; then
               ADDRESS="${{ steps.deploy.outputs.voting_module }}"
             fi
@@ -150,7 +150,7 @@ jobs:
           echo "| CommuneRegistry | \`${{ steps.deploy.outputs.commune_registry }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.commune_registry }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| MemberRegistry | \`${{ steps.deploy.outputs.member_registry }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.member_registry }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| ChoreScheduler | \`${{ steps.deploy.outputs.chore_scheduler }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.chore_scheduler }}) |" >> $GITHUB_STEP_SUMMARY
-          echo "| ExpenseManager | \`${{ steps.deploy.outputs.expense_manager }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.expense_manager }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| TaskManager | \`${{ steps.deploy.outputs.task_manager }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.task_manager }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| VotingModule | \`${{ steps.deploy.outputs.voting_module }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.voting_module }}) |" >> $GITHUB_STEP_SUMMARY
           echo "| CollateralManager | \`${{ steps.deploy.outputs.collateral_manager }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.collateral_manager }}) |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
@@ -171,7 +171,7 @@ jobs:
               "CommuneRegistry": "${{ steps.deploy.outputs.commune_registry }}",
               "MemberRegistry": "${{ steps.deploy.outputs.member_registry }}",
               "ChoreScheduler": "${{ steps.deploy.outputs.chore_scheduler }}",
-              "ExpenseManager": "${{ steps.deploy.outputs.expense_manager }}",
+              "TaskManager": "${{ steps.deploy.outputs.task_manager }}",
               "VotingModule": "${{ steps.deploy.outputs.voting_module }}",
               "CollateralManager": "${{ steps.deploy.outputs.collateral_manager }}"
             }
@@ -204,7 +204,7 @@ jobs:
             | CommuneRegistry | \`${{ steps.deploy.outputs.commune_registry }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.commune_registry }}) |
             | MemberRegistry | \`${{ steps.deploy.outputs.member_registry }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.member_registry }}) |
             | ChoreScheduler | \`${{ steps.deploy.outputs.chore_scheduler }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.chore_scheduler }}) |
-            | ExpenseManager | \`${{ steps.deploy.outputs.expense_manager }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.expense_manager }}) |
+            | TaskManager | \`${{ steps.deploy.outputs.task_manager }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.task_manager }}) |
             | VotingModule | \`${{ steps.deploy.outputs.voting_module }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.voting_module }}) |
             | CollateralManager | \`${{ steps.deploy.outputs.collateral_manager }}\` | [View](https://holesky.etherscan.io/address/${{ steps.deploy.outputs.collateral_manager }}) |
 

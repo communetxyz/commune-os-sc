@@ -36,7 +36,7 @@ contract DeployScript is Script {
         console.log("CommuneRegistry:", address(communeOS.communeRegistry()));
         console.log("MemberRegistry:", address(communeOS.memberRegistry()));
         console.log("ChoreScheduler:", address(communeOS.choreScheduler()));
-        console.log("ExpenseManager:", address(communeOS.expenseManager()));
+        console.log("TaskManager:", address(communeOS.taskManager()));
         console.log("VotingModule:", address(communeOS.votingModule()));
         console.log("CollateralManager:", address(communeOS.collateralManager()));
 

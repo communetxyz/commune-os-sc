@@ -35,7 +35,7 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         communeRegistry = new CommuneRegistry();
         memberRegistry = new MemberRegistry();
         choreScheduler = new ChoreScheduler();
-        expenseManager = new ExpenseManager();
+        taskManager = new TaskManager();
         votingModule = new VotingModule();
         collateralManager = new CollateralManager(collateralToken);
     }
@@ -124,53 +124,53 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         choreScheduler.markChoreComplete(communeId, choreId, period);
     }
 
-    /// @notice Create an expense with direct assignment
+    /// @notice Create a task with direct assignment
     /// @param communeId The commune ID
-    /// @param amount The expense amount
-    /// @param description Expense description
+    /// @param budget The task budget (0 is valid)
+    /// @param description Task description
     /// @param dueDate Due date
     /// @param assignedTo The member to assign
-    /// @return expenseId The created expense ID
+    /// @return taskId The created task ID
     /// @dev Both caller and assignee must be members of the commune
-    function createExpense(
+    function createTask(
         uint256 communeId,
-        uint256 amount,
+        uint256 budget,
         string memory description,
         uint256 dueDate,
         address assignedTo
-    ) external onlyMembers(communeId, assignedTo) returns (uint256 expenseId) {
-        return expenseManager.createExpense(communeId, amount, description, dueDate, assignedTo);
+    ) external onlyMembers(communeId, assignedTo) returns (uint256 taskId) {
+        return taskManager.createTask(communeId, budget, description, dueDate, assignedTo);
     }
 
-    /// @notice Mark an expense as paid
+    /// @notice Mark a task as done
     /// @param communeId The commune ID
-    /// @param expenseId The expense ID
+    /// @param taskId The task ID
     /// @dev Caller must be a member of the commune
-    function markExpensePaid(uint256 communeId, uint256 expenseId) external onlyMember(communeId) {
-        expenseManager.markExpensePaid(expenseId);
+    function markTaskDone(uint256 communeId, uint256 taskId) external onlyMember(communeId) {
+        taskManager.markTaskDone(taskId);
     }
 
-    /// @notice Dispute an expense
+    /// @notice Dispute a task
     /// @param communeId The commune ID
-    /// @param expenseId The expense ID
+    /// @param taskId The task ID
     /// @param newAssignee Proposed new assignee
     /// @return disputeId The created dispute ID
     /// @dev Both caller and new assignee must be members of the commune
-    function disputeExpense(uint256 communeId, uint256 expenseId, address newAssignee)
+    function disputeTask(uint256 communeId, uint256 taskId, address newAssignee)
         external
         onlyMembers(communeId, newAssignee)
         returns (uint256 disputeId)
     {
         // Create dispute
-        disputeId = votingModule.createDispute(expenseId, newAssignee);
+        disputeId = votingModule.createDispute(taskId, newAssignee);
 
-        // Mark expense as disputed
-        expenseManager.markExpenseDisputed(expenseId, disputeId);
+        // Mark task as disputed
+        taskManager.markTaskDisputed(taskId, disputeId);
 
         return disputeId;
     }
 
-    /// @notice Vote on an expense dispute
+    /// @notice Vote on a task dispute
     /// @param communeId The commune ID
     /// @param disputeId The dispute ID
     /// @param support True to support the dispute
@@ -186,24 +186,22 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         Dispute memory dispute = votingModule.getDispute(disputeId);
 
         if (dispute.status == DisputeStatus.Upheld) {
-            // Get expense details
-            Expense memory expense = expenseManager.getExpenseStatus(dispute.expenseId);
-            address oldAssignee = expense.assignedTo;
+            // Get task details
+            Task memory task = taskManager.getTaskStatus(dispute.taskId);
+            address oldAssignee = task.assignedTo;
             address newAssignee = dispute.proposedNewAssignee;
 
-            // Calculate slash amount (min of expense amount and available collateral)
+            // Calculate slash amount (min of task budget and available collateral)
             uint256 availableCollateral = collateralManager.getCollateralBalance(oldAssignee);
-            uint256 slashAmount = expense.amount < availableCollateral ? expense.amount : availableCollateral;
+            uint256 slashAmount = task.budget < availableCollateral ? task.budget : availableCollateral;
 
             // Slash collateral and transfer to new assignee if amount > 0
             if (slashAmount > 0) {
                 collateralManager.slashCollateral(oldAssignee, slashAmount, newAssignee);
             }
 
-            // Create a new expense as a copy for the new assignee
-            expenseManager.createExpense(
-                expense.communeId, expense.amount, expense.description, expense.dueDate, newAssignee
-            );
+            // Create a new task as a copy for the new assignee
+            taskManager.createTask(task.communeId, task.budget, task.description, task.dueDate, newAssignee);
         }
     }
 
