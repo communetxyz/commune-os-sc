@@ -221,8 +221,14 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @notice Remove a member from a commune
     /// @param communeId The commune ID
     /// @param memberAddress Address of the member to remove
-    /// @dev Caller must be a member of the commune. Withdraws all collateral. Chore assignments are automatically invalidated.
-    function removeMember(uint256 communeId, address memberAddress) external onlyMember(communeId) {
+    /// @dev Caller must be the creator of the commune. Withdraws all collateral. Chore assignments are automatically invalidated.
+    function removeMember(uint256 communeId, address memberAddress) external {
+        // Get commune details
+        Commune memory commune = communeRegistry.getCommune(communeId);
+
+        // Check if caller is the creator
+        if (msg.sender != commune.creator) revert NotCreator();
+
         // Withdraw all collateral (if any exists)
         collateralManager.withdrawCollateral(memberAddress);
 
