@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import {ChoreInstance} from "./interfaces/ICommuneViewer.sol";
 import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import {ChoreSchedule} from "./interfaces/IChoreScheduler.sol";
@@ -16,24 +17,86 @@ import "./CollateralManager.sol";
 /// @title CommuneViewer
 /// @notice Provides comprehensive view functions for querying commune data
 /// @dev Separated from CommuneOS to keep main contract focused on state changes
-abstract contract CommuneViewer {
-    /// @notice Registry for commune creation and invite validation
-    CommuneRegistry public communeRegistry;
+abstract contract CommuneViewer is Initializable {
+    /// @custom:storage-location erc7201:commune.storage.CommuneViewer
+    struct CommuneViewerStorage {
+        CommuneRegistry communeRegistry;
+        MemberRegistry memberRegistry;
+        ChoreScheduler choreScheduler;
+        TaskManager taskManager;
+        VotingModule votingModule;
+        CollateralManager collateralManager;
+    }
 
-    /// @notice Registry for commune member management
-    MemberRegistry public memberRegistry;
+    // keccak256(abi.encode(uint256(keccak256("commune.storage.CommuneViewer")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant CommuneViewerStorageLocation =
+        0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a00;
 
-    /// @notice Scheduler for recurring chore management
-    ChoreScheduler public choreScheduler;
+    function _getCommuneViewerStorage() private pure returns (CommuneViewerStorage storage $) {
+        assembly {
+            $.slot := CommuneViewerStorageLocation
+        }
+    }
 
-    /// @notice Manager for task tracking and assignment
-    TaskManager public taskManager;
+    /// @notice Returns the CommuneRegistry contract
+    function communeRegistry() public view virtual returns (CommuneRegistry) {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        return $.communeRegistry;
+    }
 
-    /// @notice Voting system for dispute resolution
-    VotingModule public votingModule;
+    /// @notice Returns the MemberRegistry contract
+    function memberRegistry() public view virtual returns (MemberRegistry) {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        return $.memberRegistry;
+    }
 
-    /// @notice Manager for member collateral deposits and slashing
-    CollateralManager public collateralManager;
+    /// @notice Returns the ChoreScheduler contract
+    function choreScheduler() public view virtual returns (ChoreScheduler) {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        return $.choreScheduler;
+    }
+
+    /// @notice Returns the TaskManager contract
+    function taskManager() public view virtual returns (TaskManager) {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        return $.taskManager;
+    }
+
+    /// @notice Returns the VotingModule contract
+    function votingModule() public view virtual returns (VotingModule) {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        return $.votingModule;
+    }
+
+    /// @notice Returns the CollateralManager contract
+    function collateralManager() public view virtual returns (CollateralManager) {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        return $.collateralManager;
+    }
+
+    /// @notice Initializes the CommuneViewer with module addresses
+    /// @param _communeRegistry Address of the CommuneRegistry
+    /// @param _memberRegistry Address of the MemberRegistry
+    /// @param _choreScheduler Address of the ChoreScheduler
+    /// @param _taskManager Address of the TaskManager
+    /// @param _votingModule Address of the VotingModule
+    /// @param _collateralManager Address of the CollateralManager
+    function __CommuneViewer_init(
+        address _communeRegistry,
+        address _memberRegistry,
+        address _choreScheduler,
+        address _taskManager,
+        address _votingModule,
+        address _collateralManager
+    ) internal onlyInitializing {
+        CommuneViewerStorage storage $ = _getCommuneViewerStorage();
+        $.communeRegistry = CommuneRegistry(_communeRegistry);
+        $.memberRegistry = MemberRegistry(_memberRegistry);
+        $.choreScheduler = ChoreScheduler(_choreScheduler);
+        $.taskManager = TaskManager(_taskManager);
+        $.votingModule = VotingModule(_votingModule);
+        $.collateralManager = CollateralManager(_collateralManager);
+    }
 
     /// @notice Get commune statistics
     /// @param communeId The commune ID
@@ -46,10 +109,10 @@ abstract contract CommuneViewer {
         view
         returns (Commune memory commune, uint256 memberCount, uint256 choreCount, uint256 taskCount)
     {
-        commune = communeRegistry.getCommune(communeId);
-        memberCount = memberRegistry.getMemberCount(communeId);
-        choreCount = choreScheduler.getChoreSchedules(communeId).length;
-        taskCount = taskManager.getCommuneTasks(communeId).length;
+        commune = communeRegistry().getCommune(communeId);
+        memberCount = memberRegistry().getMemberCount(communeId);
+        choreCount = choreScheduler().getChoreSchedules(communeId).length;
+        taskCount = taskManager().getCommuneTasks(communeId).length;
 
         return (commune, memberCount, choreCount, taskCount);
     }
@@ -64,28 +127,28 @@ abstract contract CommuneViewer {
         view
         returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed)
     {
-        return choreScheduler.getCurrentChores(communeId);
+        return choreScheduler().getCurrentChores(communeId);
     }
 
     /// @notice Get all members of a commune
     /// @param communeId The commune ID
     /// @return address[] Array of member addresses
     function getCommuneMembers(uint256 communeId) external view returns (address[] memory) {
-        return memberRegistry.getCommuneMembers(communeId);
+        return memberRegistry().getCommuneMembers(communeId);
     }
 
     /// @notice Get all tasks for a commune
     /// @param communeId The commune ID
     /// @return Task[] Array of tasks
     function getCommuneTasks(uint256 communeId) external view returns (Task[] memory) {
-        return taskManager.getCommuneTasks(communeId);
+        return taskManager().getCommuneTasks(communeId);
     }
 
     /// @notice Get member's collateral balance
     /// @param member The member address
     /// @return uint256 Collateral balance
     function getCollateralBalance(address member) external view returns (uint256) {
-        return collateralManager.getCollateralBalance(member);
+        return collateralManager().getCollateralBalance(member);
     }
 
     /// @notice Get basic commune info and members with their collaterals for a user
@@ -107,21 +170,21 @@ abstract contract CommuneViewer {
         )
     {
         // Get the commune this user belongs to
-        communeId = memberRegistry.memberCommuneId(user);
+        communeId = memberRegistry().memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
         // Get commune basic data
-        communeData = communeRegistry.getCommune(communeId);
+        communeData = communeRegistry().getCommune(communeId);
 
         // Get all members
-        members = memberRegistry.getCommuneMembers(communeId);
+        members = memberRegistry().getCommuneMembers(communeId);
 
         // Get collateral balance and username for each member
         memberCollaterals = new uint256[](members.length);
         memberUsernames = new string[](members.length);
         for (uint256 i = 0; i < members.length; i++) {
-            memberCollaterals[i] = collateralManager.getCollateralBalance(members[i]);
-            memberUsernames[i] = memberRegistry.memberUsername(members[i]);
+            memberCollaterals[i] = collateralManager().getCollateralBalance(members[i]);
+            memberUsernames[i] = memberRegistry().memberUsername(members[i]);
         }
     }
 
@@ -136,11 +199,11 @@ abstract contract CommuneViewer {
         view
         returns (uint256 communeId, ChoreInstance[] memory instances)
     {
-        communeId = memberRegistry.memberCommuneId(user);
+        communeId = memberRegistry().memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
-        ChoreSchedule[] memory schedules = choreScheduler.getChoreSchedules(communeId);
-        address[] memory members = memberRegistry.getCommuneMembers(communeId);
+        ChoreSchedule[] memory schedules = choreScheduler().getChoreSchedules(communeId);
+        address[] memory members = memberRegistry().getCommuneMembers(communeId);
 
         // Calculate max possible instances: +1 to cover both start and end dates inclusively
         // This is just an upper bound estimate; the actual array is trimmed to size later
@@ -183,7 +246,7 @@ abstract contract CommuneViewer {
         while (instanceStart < endDate) {
             uint256 period = (instanceStart - schedule.startTime) / schedule.frequency;
             address assignee =
-                choreScheduler.getChoreAssigneeForPeriod(communeId, schedule.id, period, members, memberRegistry);
+                choreScheduler().getChoreAssigneeForPeriod(communeId, schedule.id, period, members, memberRegistry());
 
             instances[count++] = ChoreInstance({
                 scheduleId: schedule.id,
@@ -193,8 +256,8 @@ abstract contract CommuneViewer {
                 periodStart: instanceStart,
                 periodEnd: instanceStart + schedule.frequency,
                 assignedTo: assignee,
-                assignedToUsername: memberRegistry.memberUsername(assignee),
-                completed: choreScheduler.isChoreComplete(communeId, schedule.id, period)
+                assignedToUsername: memberRegistry().memberUsername(assignee),
+                completed: choreScheduler().isChoreComplete(communeId, schedule.id, period)
             });
 
             instanceStart += schedule.frequency;
@@ -224,7 +287,7 @@ abstract contract CommuneViewer {
         )
     {
         // Get the commune this user belongs to
-        communeId = memberRegistry.memberCommuneId(user);
+        communeId = memberRegistry().memberCommuneId(user);
         require(communeId != 0, "User is not a member of any commune");
 
         (doneTasks, pendingTasks, disputedTasks, overdueTasks) = _getMonthTasks(communeId, monthStart, monthEnd);
@@ -241,7 +304,7 @@ abstract contract CommuneViewer {
             Task[] memory overdueTasks
         )
     {
-        Task[] memory allTasks = taskManager.getCommuneTasks(communeId);
+        Task[] memory allTasks = taskManager().getCommuneTasks(communeId);
 
         // Allocate arrays with max size (will have empty slots at end)
         doneTasks = new Task[](allTasks.length);
@@ -259,7 +322,7 @@ abstract contract CommuneViewer {
                 continue;
             }
 
-            if (taskManager.isTaskDone(task.id)) {
+            if (taskManager().isTaskDone(task.id)) {
                 doneTasks[indices[0]++] = task;
             } else if (task.disputed) {
                 disputedTasks[indices[2]++] = task;
@@ -277,7 +340,7 @@ abstract contract CommuneViewer {
     /// @param communeId The commune ID
     /// @return disputes Array of disputes related to commune tasks
     function getCommuneDisputes(uint256 communeId) external view returns (Dispute[] memory disputes) {
-        Task[] memory tasks = taskManager.getCommuneTasks(communeId);
+        Task[] memory tasks = taskManager().getCommuneTasks(communeId);
 
         // Count disputed tasks
         uint256 disputeCount = 0;
@@ -297,7 +360,7 @@ abstract contract CommuneViewer {
                 // Search for the dispute by trying sequential IDs
                 // This is a workaround since we don't have task->dispute mapping
                 for (uint256 disputeId = 1; disputeId <= 1000; disputeId++) {
-                    try votingModule.getDispute(disputeId) returns (Dispute memory dispute) {
+                    try votingModule().getDispute(disputeId) returns (Dispute memory dispute) {
                         if (dispute.taskId == tasks[i].id) {
                             disputes[index] = dispute;
                             index++;
@@ -318,12 +381,12 @@ abstract contract CommuneViewer {
     /// @param communeId The commune ID to get member list
     /// @return voters Array of addresses that have voted on the dispute
     function getDisputeVoters(uint256 disputeId, uint256 communeId) external view returns (address[] memory voters) {
-        address[] memory members = memberRegistry.getCommuneMembers(communeId);
+        address[] memory members = memberRegistry().getCommuneMembers(communeId);
 
         // Count voters
         uint256 voterCount = 0;
         for (uint256 i = 0; i < members.length; i++) {
-            if (votingModule.hasVotedOnDispute(disputeId, members[i])) {
+            if (votingModule().hasVotedOnDispute(disputeId, members[i])) {
                 voterCount++;
             }
         }
@@ -332,7 +395,7 @@ abstract contract CommuneViewer {
         voters = new address[](voterCount);
         uint256 index = 0;
         for (uint256 i = 0; i < members.length; i++) {
-            if (votingModule.hasVotedOnDispute(disputeId, members[i])) {
+            if (votingModule().hasVotedOnDispute(disputeId, members[i])) {
                 voters[index] = members[i];
                 index++;
             }
@@ -347,7 +410,7 @@ abstract contract CommuneViewer {
     function getUsernames(address[] memory addresses) external view returns (string[] memory usernames) {
         usernames = new string[](addresses.length);
         for (uint256 i = 0; i < addresses.length; i++) {
-            usernames[i] = memberRegistry.memberUsername(addresses[i]);
+            usernames[i] = memberRegistry().memberUsername(addresses[i]);
         }
         return usernames;
     }

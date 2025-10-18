@@ -9,16 +9,53 @@ import "./CommuneOSModule.sol";
 /// @notice Creates and manages communes with invite-based access
 /// @dev Uses EIP-191 signature verification for invite system
 contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
-    /// @notice Mapping of commune ID to commune data
-    mapping(uint256 => Commune) public communes;
+    /// @custom:storage-location erc7201:commune.storage.CommuneRegistry
+    struct CommuneRegistryStorage {
+        mapping(uint256 => Commune) communes;
+        mapping(uint256 => mapping(uint256 => bool)) usedNonces;
+        uint256 communeCount;
+    }
 
-    /// @notice Tracks which nonces have been used for each commune to prevent replay attacks
-    /// @dev communeId => nonce => used
-    mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
+    // keccak256(abi.encode(uint256(keccak256("commune.storage.CommuneRegistry")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant CommuneRegistryStorageLocation =
+        0x2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a00;
 
-    /// @notice Counter for assigning unique commune IDs
-    /// @dev Starts at 1 so 0 can be used as a sentinel value for "not a member"
-    uint256 public communeCount = 1;
+    function _getCommuneRegistryStorage() private pure returns (CommuneRegistryStorage storage $) {
+        assembly {
+            $.slot := CommuneRegistryStorageLocation
+        }
+    }
+
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Returns the mapping of commune ID to commune data
+    function communes(uint256 communeId) public view returns (Commune memory) {
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        return $.communes[communeId];
+    }
+
+    /// @notice Returns whether a nonce has been used for a commune
+    function usedNonces(uint256 communeId, uint256 nonce) public view returns (bool) {
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        return $.usedNonces[communeId][nonce];
+    }
+
+    /// @notice Returns the current commune count
+    function communeCount() public view returns (uint256) {
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        return $.communeCount;
+    }
+
+    /// @notice Initializes the CommuneRegistry
+    /// @param _communeOS Address of the main CommuneOS contract
+    function initialize(address _communeOS) external initializer {
+        __CommuneOSModule_init(_communeOS);
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        $.communeCount = 1;
+    }
 
     /// @notice Creates a new commune with specified configuration
     /// @param name Human-readable name for the commune
@@ -36,9 +73,10 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
         if (creator == address(0)) revert InvalidCreator();
         if (collateralRequired && collateralAmount == 0) revert InvalidCollateralAmount();
 
-        communeId = communeCount++;
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        communeId = $.communeCount++;
 
-        communes[communeId] = Commune({
+        $.communes[communeId] = Commune({
             id: communeId,
             name: name,
             creator: creator,
@@ -57,8 +95,9 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @return bool True if signature is valid and from the commune creator, false otherwise
     /// @dev Checks that: communeId exists, nonce hasn't been used, and signature is from creator
     function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature) external view returns (bool) {
-        if (communeId >= communeCount) revert InvalidCommuneId();
-        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        if (communeId >= $.communeCount) revert InvalidCommuneId();
+        if ($.usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
 
         // Create the message hash
         bytes32 messageHash = getMessageHash(communeId, nonce);
@@ -68,7 +107,7 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
         address signer = recoverSigner(ethSignedMessageHash, signature);
 
         // Verify the signer is the commune creator
-        return signer == communes[communeId].creator;
+        return signer == $.communes[communeId].creator;
     }
 
     /// @notice Marks a nonce as used to prevent replay attacks
@@ -76,9 +115,10 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @param nonce Nonce value to mark as used
     /// @dev Reverts if communeId is invalid or nonce already used
     function markNonceUsed(uint256 communeId, uint256 nonce) external onlyCommuneOS {
-        if (communeId >= communeCount) revert InvalidCommuneId();
-        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
-        usedNonces[communeId][nonce] = true;
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        if (communeId >= $.communeCount) revert InvalidCommuneId();
+        if ($.usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
+        $.usedNonces[communeId][nonce] = true;
     }
 
     /// @notice Retrieves full commune data
@@ -86,8 +126,9 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @return Commune Complete commune struct with all fields
     /// @dev Reverts if communeId doesn't exist
     function getCommune(uint256 communeId) external view returns (Commune memory) {
-        if (communeId >= communeCount) revert InvalidCommuneId();
-        return communes[communeId];
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        if (communeId >= $.communeCount) revert InvalidCommuneId();
+        return $.communes[communeId];
     }
 
     /// @notice Checks whether a nonce has been used for a commune
@@ -95,7 +136,8 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @param nonce Nonce value to check
     /// @return bool True if nonce has been used, false otherwise
     function isNonceUsed(uint256 communeId, uint256 nonce) external view returns (bool) {
-        return usedNonces[communeId][nonce];
+        CommuneRegistryStorage storage $ = _getCommuneRegistryStorage();
+        return $.usedNonces[communeId][nonce];
     }
 
     /// @notice Generates message hash from communeId and nonce
