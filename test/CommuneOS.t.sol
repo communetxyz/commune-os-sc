@@ -421,17 +421,45 @@ contract CommuneOSTest is Test {
         assertFalse(communeOS.memberRegistry().isMember(communeId, member1));
     }
 
-    function testCannotRemoveMemberIfNotMember() public {
+    function testCannotRemoveMemberIfNotCreator() public {
         vm.startPrank(creator);
 
         ChoreSchedule[] memory schedules = new ChoreSchedule[](0);
         uint256 communeId = communeOS.createCommune("Test Commune", false, 0, schedules, "creator");
 
+        // Generate invite and add member1
+        uint256 nonce = 1;
+        bytes32 messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        bytes memory signature = abi.encodePacked(r, s, v);
+
         vm.stopPrank();
 
-        // Non-member tries to remove another address
+        // member1 joins
+        vm.prank(member1);
+        communeOS.joinCommune(communeId, nonce, signature, "member1");
+
+        // Generate another invite for member2
+        nonce = 2;
+        messageHash = keccak256(abi.encodePacked(communeId, nonce));
+        ethSignedMessageHash = keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", messageHash));
+        (v, r, s) = vm.sign(creatorPrivateKey, ethSignedMessageHash);
+        signature = abi.encodePacked(r, s, v);
+
+        // member2 joins
+        vm.prank(member2);
+        communeOS.joinCommune(communeId, nonce, signature, "member2");
+
+        // member1 tries to remove member2 (should fail, only creator can remove)
         vm.startPrank(member1);
-        vm.expectRevert(ICommuneOS.NotAMember.selector);
+        vm.expectRevert(ICommuneOS.NotCreator.selector);
+        communeOS.removeMember(communeId, member2);
+        vm.stopPrank();
+
+        // Non-member tries to remove another address (should also fail with NotCreator)
+        vm.startPrank(address(0x999));
+        vm.expectRevert(ICommuneOS.NotCreator.selector);
         communeOS.removeMember(communeId, member2);
         vm.stopPrank();
     }
