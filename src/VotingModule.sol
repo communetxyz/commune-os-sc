@@ -9,20 +9,58 @@ import "./CommuneOSModule.sol";
 /// @notice Manages voting on task disputes with automatic 2/3 majority resolution
 /// @dev Disputes auto-resolve when either votesFor or votesAgainst reaches 2/3 of total members
 contract VotingModule is CommuneOSModule, IVotingModule {
-    /// @notice Stores dispute data by dispute ID
-    /// @dev Maps dispute ID => Dispute struct containing all dispute information
-    mapping(uint256 => Dispute) public disputes;
+    /// @custom:storage-location erc7201:commune.storage.VotingModule
+    struct VotingModuleStorage {
+        mapping(uint256 => Dispute) disputes;
+        mapping(uint256 => mapping(address => bool)) hasVoted;
+        mapping(uint256 => mapping(address => bool)) votes;
+        uint256 disputeCount;
+    }
 
-    /// @notice Tracks whether an address has voted on a specific dispute
-    /// @dev Maps dispute ID => voter address => has voted (true/false)
-    mapping(uint256 => mapping(address => bool)) public hasVoted;
+    // keccak256(abi.encode(uint256(keccak256("commune.storage.VotingModule")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant VotingModuleStorageLocation =
+        0x6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a00;
 
-    /// @notice Records the vote choice for each voter on each dispute
-    /// @dev Maps dispute ID => voter address => vote (true = for, false = against)
-    mapping(uint256 => mapping(address => bool)) public votes;
+    function _getVotingModuleStorage() private pure returns (VotingModuleStorage storage $) {
+        assembly {
+            $.slot := VotingModuleStorageLocation
+        }
+    }
 
-    /// @notice Total number of disputes created (also serves as next dispute ID)
-    uint256 public disputeCount;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Returns a dispute by ID
+    function disputes(uint256 disputeId) public view returns (Dispute memory) {
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        return $.disputes[disputeId];
+    }
+
+    /// @notice Returns whether an address has voted on a dispute
+    function hasVoted(uint256 disputeId, address voter) public view returns (bool) {
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        return $.hasVoted[disputeId][voter];
+    }
+
+    /// @notice Returns the vote choice for a voter on a dispute
+    function votes(uint256 disputeId, address voter) public view returns (bool) {
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        return $.votes[disputeId][voter];
+    }
+
+    /// @notice Returns the total number of disputes
+    function disputeCount() public view returns (uint256) {
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        return $.disputeCount;
+    }
+
+    /// @notice Initializes the VotingModule
+    /// @param _communeOS Address of the main CommuneOS contract
+    function initialize(address _communeOS) external initializer {
+        __CommuneOSModule_init(_communeOS);
+    }
 
     /// @notice Create a new dispute for a task
     /// @param taskId The task being disputed
@@ -35,9 +73,10 @@ contract VotingModule is CommuneOSModule, IVotingModule {
     {
         if (proposedNewAssignee == address(0)) revert InvalidAssignee();
 
-        disputeId = disputeCount++;
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        disputeId = $.disputeCount++;
 
-        disputes[disputeId] = Dispute({
+        $.disputes[disputeId] = Dispute({
             taskId: taskId,
             proposedNewAssignee: proposedNewAssignee,
             votesFor: 0,
@@ -59,14 +98,15 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         external
         onlyCommuneOS
     {
-        if (disputeId >= disputeCount) revert InvalidDisputeId();
-        if (disputes[disputeId].status != DisputeStatus.Pending) revert AlreadyResolved();
-        if (hasVoted[disputeId][voter]) revert AlreadyVoted();
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        if (disputeId >= $.disputeCount) revert InvalidDisputeId();
+        if ($.disputes[disputeId].status != DisputeStatus.Pending) revert AlreadyResolved();
+        if ($.hasVoted[disputeId][voter]) revert AlreadyVoted();
 
-        hasVoted[disputeId][voter] = true;
-        votes[disputeId][voter] = support;
+        $.hasVoted[disputeId][voter] = true;
+        $.votes[disputeId][voter] = support;
 
-        Dispute storage dispute = disputes[disputeId];
+        Dispute storage dispute = $.disputes[disputeId];
 
         if (support) {
             dispute.votesFor++;
@@ -94,8 +134,9 @@ contract VotingModule is CommuneOSModule, IVotingModule {
     /// @param disputeId The dispute ID
     /// @return Dispute The dispute data
     function getDispute(uint256 disputeId) external view returns (Dispute memory) {
-        if (disputeId >= disputeCount) revert InvalidDisputeId();
-        return disputes[disputeId];
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        if (disputeId >= $.disputeCount) revert InvalidDisputeId();
+        return $.disputes[disputeId];
     }
 
     /// @notice Check if address has voted on a dispute
@@ -103,7 +144,8 @@ contract VotingModule is CommuneOSModule, IVotingModule {
     /// @param voter The voter address
     /// @return bool True if has voted
     function hasVotedOnDispute(uint256 disputeId, address voter) external view returns (bool) {
-        return hasVoted[disputeId][voter];
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        return $.hasVoted[disputeId][voter];
     }
 
     /// @notice Get vote tallies for a dispute
@@ -111,8 +153,9 @@ contract VotingModule is CommuneOSModule, IVotingModule {
     /// @return votesFor Number of votes in favor
     /// @return votesAgainst Number of votes against
     function tallyVotes(uint256 disputeId) external view returns (uint256 votesFor, uint256 votesAgainst) {
-        if (disputeId >= disputeCount) revert InvalidDisputeId();
-        Dispute memory dispute = disputes[disputeId];
+        VotingModuleStorage storage $ = _getVotingModuleStorage();
+        if (disputeId >= $.disputeCount) revert InvalidDisputeId();
+        Dispute memory dispute = $.disputes[disputeId];
         return (dispute.votesFor, dispute.votesAgainst);
     }
 }

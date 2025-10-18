@@ -10,25 +10,65 @@ import "./CommuneOSModule.sol";
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage per completion
 contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
-    /// @notice Stores all active chore schedules for each commune in an array
-    /// @dev Maps commune ID => array of ChoreSchedule structs (can be popped when removed)
-    mapping(uint256 => ChoreSchedule[]) public choreSchedules;
+    /// @custom:storage-location erc7201:commune.storage.ChoreScheduler
+    struct ChoreSchedulerStorage {
+        mapping(uint256 => ChoreSchedule[]) choreSchedules;
+        mapping(uint256 => mapping(uint256 => ChoreSchedule)) choreScheduleById;
+        mapping(uint256 => uint256) nextChoreId;
+        mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) completions;
+        mapping(uint256 => mapping(uint256 => mapping(uint256 => address))) choreAssigneeOverrides;
+    }
 
-    /// @notice Stores chore schedules by their stable ID for lookups
-    /// @dev Maps commune ID => chore ID => ChoreSchedule struct (stable, never removed)
-    mapping(uint256 => mapping(uint256 => ChoreSchedule)) public choreScheduleById;
+    // keccak256(abi.encode(uint256(keccak256("commune.storage.ChoreScheduler")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant ChoreSchedulerStorageLocation =
+        0x4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a00;
 
-    /// @notice Counter for generating unique chore IDs per commune
-    /// @dev Maps commune ID => next available chore ID
-    mapping(uint256 => uint256) public nextChoreId;
+    function _getChoreSchedulerStorage() private pure returns (ChoreSchedulerStorage storage $) {
+        assembly {
+            $.slot := ChoreSchedulerStorageLocation
+        }
+    }
 
-    /// @notice Tracks completion status for each chore period
-    /// @dev Maps commune ID => chore ID => period number => completion status (true/false)
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => bool))) public completions;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
 
-    /// @notice Stores manual assignee overrides for specific chores per period
-    /// @dev Maps commune ID => chore ID => period number => assignee address (address(0) means use rotation)
-    mapping(uint256 => mapping(uint256 => mapping(uint256 => address))) public choreAssigneeOverrides;
+    /// @notice Returns a chore schedule from the array
+    function choreSchedules(uint256 communeId, uint256 index) public view returns (ChoreSchedule memory) {
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.choreSchedules[communeId][index];
+    }
+
+    /// @notice Returns a chore schedule by ID
+    function choreScheduleById(uint256 communeId, uint256 choreId) public view returns (ChoreSchedule memory) {
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.choreScheduleById[communeId][choreId];
+    }
+
+    /// @notice Returns the next chore ID for a commune
+    function nextChoreId(uint256 communeId) public view returns (uint256) {
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.nextChoreId[communeId];
+    }
+
+    /// @notice Returns the completion status for a chore period
+    function completions(uint256 communeId, uint256 choreId, uint256 period) public view returns (bool) {
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.completions[communeId][choreId][period];
+    }
+
+    /// @notice Returns the assignee override for a chore period
+    function choreAssigneeOverrides(uint256 communeId, uint256 choreId, uint256 period) public view returns (address) {
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.choreAssigneeOverrides[communeId][choreId][period];
+    }
+
+    /// @notice Initializes the ChoreScheduler
+    /// @param _communeOS Address of the main CommuneOS contract
+    function initialize(address _communeOS) external initializer {
+        __CommuneOSModule_init(_communeOS);
+    }
 
     /// @notice Gets a chore schedule and validates it exists and is not deleted
     /// @param communeId The commune ID
@@ -36,7 +76,8 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @return schedule The chore schedule
     /// @dev Reverts if chore doesn't exist or is deleted
     function _getValidChore(uint256 communeId, uint256 choreId) internal view returns (ChoreSchedule memory schedule) {
-        schedule = choreScheduleById[communeId][choreId];
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        schedule = $.choreScheduleById[communeId][choreId];
         if (schedule.startTime == 0) revert InvalidChoreId();
         if (schedule.deleted) revert InvalidChoreId();
     }
@@ -48,12 +89,14 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external onlyCommuneOS {
         if (schedules.length == 0) revert NoSchedulesProvided();
 
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+
         for (uint256 i = 0; i < schedules.length; i++) {
             if (schedules[i].frequency == 0) revert InvalidFrequency();
             if (bytes(schedules[i].title).length == 0) revert EmptyTitle();
             if (schedules[i].startTime == 0) revert InvalidStartTime();
 
-            uint256 choreId = nextChoreId[communeId]++;
+            uint256 choreId = $.nextChoreId[communeId]++;
 
             ChoreSchedule memory schedule = ChoreSchedule({
                 id: choreId,
@@ -64,9 +107,9 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
             });
 
             // Store in array for iteration
-            choreSchedules[communeId].push(schedule);
+            $.choreSchedules[communeId].push(schedule);
             // Store in mapping for stable ID lookups
-            choreScheduleById[communeId][choreId] = schedule;
+            $.choreScheduleById[communeId][choreId] = schedule;
 
             emit ChoreCreated(communeId, choreId, schedule.title);
         }
@@ -81,11 +124,13 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         // Validate chore exists and is not already deleted
         _getValidChore(communeId, choreId);
 
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+
         // Mark as deleted in the mapping (preserves ID for historical lookups)
-        choreScheduleById[communeId][choreId].deleted = true;
+        $.choreScheduleById[communeId][choreId].deleted = true;
 
         // Find and remove from array
-        ChoreSchedule[] storage schedules = choreSchedules[communeId];
+        ChoreSchedule[] storage schedules = $.choreSchedules[communeId];
         for (uint256 i = 0; i < schedules.length; i++) {
             if (schedules[i].id == choreId) {
                 // Swap with last element and pop
@@ -106,9 +151,11 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     function markChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external onlyCommuneOS {
         _getValidChore(communeId, choreId);
 
-        if (completions[communeId][choreId][period]) revert AlreadyCompleted();
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
 
-        completions[communeId][choreId][period] = true;
+        if ($.completions[communeId][choreId][period]) revert AlreadyCompleted();
+
+        $.completions[communeId][choreId][period] = true;
         emit ChoreCompleted(communeId, choreId, period, block.timestamp);
     }
 
@@ -133,14 +180,16 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     /// @param period The period number
     /// @return bool True if completed
     function isChoreComplete(uint256 communeId, uint256 choreId, uint256 period) external view returns (bool) {
-        return completions[communeId][choreId][period];
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.completions[communeId][choreId][period];
     }
 
     /// @notice Get all chore schedules for a commune
     /// @param communeId The commune ID
     /// @return ChoreSchedule[] Array of active chore schedules
     function getChoreSchedules(uint256 communeId) external view returns (ChoreSchedule[] memory) {
-        return choreSchedules[communeId];
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        return $.choreSchedules[communeId];
     }
 
     /// @notice Get current chores with their completion status
@@ -153,7 +202,8 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         view
         returns (ChoreSchedule[] memory schedules, uint256[] memory periods, bool[] memory completed)
     {
-        schedules = choreSchedules[communeId];
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        schedules = $.choreSchedules[communeId];
         uint256 count = schedules.length;
 
         periods = new uint256[](count);
@@ -162,7 +212,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         for (uint256 i = 0; i < count; i++) {
             uint256 choreId = schedules[i].id;
             periods[i] = getCurrentPeriod(communeId, choreId);
-            completed[i] = completions[communeId][choreId][periods[i]];
+            completed[i] = $.completions[communeId][choreId][periods[i]];
         }
 
         return (schedules, periods, completed);
@@ -178,7 +228,8 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         onlyCommuneOS
     {
         _getValidChore(communeId, choreId);
-        choreAssigneeOverrides[communeId][choreId][period] = assignee;
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+        $.choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }
 
@@ -199,8 +250,10 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
     ) external view returns (address) {
         _getValidChore(communeId, choreId);
 
+        ChoreSchedulerStorage storage $ = _getChoreSchedulerStorage();
+
         // Check if there's an override for this period
-        address override_ = choreAssigneeOverrides[communeId][choreId][period];
+        address override_ = $.choreAssigneeOverrides[communeId][choreId][period];
         if (override_ != address(0)) {
             // Verify override is still a valid member using O(1) lookup
             if (memberRegistry.isMember(communeId, override_)) {

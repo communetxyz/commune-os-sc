@@ -4,10 +4,18 @@ pragma solidity ^0.8.19;
 import "forge-std/Test.sol";
 import "../script/InviteGenerator.s.sol";
 import "../src/CommuneOS.sol";
+import "../src/CommuneRegistry.sol";
+import "../src/MemberRegistry.sol";
+import "../src/ChoreScheduler.sol";
+import "../src/TaskManager.sol";
+import "../src/VotingModule.sol";
+import "../src/CollateralManager.sol";
 import "../src/interfaces/ICommuneOS.sol";
 import "../src/interfaces/IMemberRegistry.sol";
 import {Commune} from "../src/interfaces/ICommuneRegistry.sol";
 import {ChoreSchedule} from "../src/interfaces/IChoreScheduler.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 import "./MockERC20.sol";
 
 /// @title InviteGeneratorTest
@@ -30,7 +38,61 @@ contract InviteGeneratorTest is Test {
     function setUp() public {
         inviteGenerator = new InviteGenerator();
         token = new MockERC20();
-        communeOS = new CommuneOS(address(token));
+
+        // Deploy ProxyAdmin
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+
+        // Deploy implementation contracts
+        CommuneRegistry communeRegistryImpl = new CommuneRegistry();
+        MemberRegistry memberRegistryImpl = new MemberRegistry();
+        ChoreScheduler choreSchedulerImpl = new ChoreScheduler();
+        TaskManager taskManagerImpl = new TaskManager();
+        VotingModule votingModuleImpl = new VotingModule();
+        CollateralManager collateralManagerImpl = new CollateralManager();
+        CommuneOS communeOSImpl = new CommuneOS();
+
+        // Deploy proxies for module contracts
+        TransparentUpgradeableProxy communeRegistryProxy =
+            new TransparentUpgradeableProxy(address(communeRegistryImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy memberRegistryProxy =
+            new TransparentUpgradeableProxy(address(memberRegistryImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy choreSchedulerProxy =
+            new TransparentUpgradeableProxy(address(choreSchedulerImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy taskManagerProxy =
+            new TransparentUpgradeableProxy(address(taskManagerImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy votingModuleProxy =
+            new TransparentUpgradeableProxy(address(votingModuleImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy collateralManagerProxy =
+            new TransparentUpgradeableProxy(address(collateralManagerImpl), address(proxyAdmin), "");
+
+        // Deploy CommuneOS proxy and initialize with module proxy addresses
+        bytes memory communeOSInitData = abi.encodeWithSelector(
+            CommuneOS.initialize.selector,
+            address(communeRegistryProxy),
+            address(memberRegistryProxy),
+            address(choreSchedulerProxy),
+            address(taskManagerProxy),
+            address(votingModuleProxy),
+            address(collateralManagerProxy)
+        );
+
+        TransparentUpgradeableProxy communeOSProxy =
+            new TransparentUpgradeableProxy(address(communeOSImpl), address(proxyAdmin), communeOSInitData);
+
+        communeOS = CommuneOS(address(communeOSProxy));
+
+        // Initialize all module contracts with the CommuneOS proxy address
+        CommuneRegistry(address(communeRegistryProxy)).initialize(address(communeOSProxy));
+        MemberRegistry(address(memberRegistryProxy)).initialize(address(communeOSProxy));
+        ChoreScheduler(address(choreSchedulerProxy)).initialize(address(communeOSProxy));
+        TaskManager(address(taskManagerProxy)).initialize(address(communeOSProxy));
+        VotingModule(address(votingModuleProxy)).initialize(address(communeOSProxy));
+        CollateralManager(address(collateralManagerProxy)).initialize(address(communeOSProxy), address(token));
 
         creator = vm.addr(creatorPrivateKey);
         member1 = vm.addr(member1PrivateKey);

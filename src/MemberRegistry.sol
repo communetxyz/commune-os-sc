@@ -9,20 +9,58 @@ import "./CommuneOSModule.sol";
 /// @notice Manages commune members and their status
 /// @dev Uses memberCommuneId == 0 as sentinel value for non-members
 contract MemberRegistry is CommuneOSModule, IMemberRegistry {
-    /// @notice Stores all members for each commune in an array
-    /// @dev communeId => Member[]
-    mapping(uint256 => Member[]) public communeMembers;
+    /// @custom:storage-location erc7201:commune.storage.MemberRegistry
+    struct MemberRegistryStorage {
+        mapping(uint256 => Member[]) communeMembers;
+        mapping(address => uint256) memberCommuneId;
+        mapping(address => string) memberUsername;
+        mapping(uint256 => mapping(uint256 => bool)) usedNonces;
+    }
 
-    /// @notice Maps member addresses to their commune ID
-    /// @dev 0 means not registered (since commune IDs start at 1)
-    mapping(address => uint256) public memberCommuneId;
+    // keccak256(abi.encode(uint256(keccak256("commune.storage.MemberRegistry")) - 1)) & ~bytes32(uint256(0xff))
+    bytes32 private constant MemberRegistryStorageLocation =
+        0x3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a00;
 
-    /// @notice Maps member addresses to their username
-    mapping(address => string) public memberUsername;
+    function _getMemberRegistryStorage() private pure returns (MemberRegistryStorage storage $) {
+        assembly {
+            $.slot := MemberRegistryStorageLocation
+        }
+    }
 
-    /// @notice Tracks which nonces have been used for each commune to prevent replay attacks
-    /// @dev communeId => nonce => used
-    mapping(uint256 => mapping(uint256 => bool)) public usedNonces;
+    /// @custom:oz-upgrades-unsafe-allow constructor
+    constructor() {
+        _disableInitializers();
+    }
+
+    /// @notice Returns the members array for a commune
+    function communeMembers(uint256 communeId, uint256 index) public view returns (Member memory) {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.communeMembers[communeId][index];
+    }
+
+    /// @notice Returns the commune ID for a member
+    function memberCommuneId(address member) public view returns (uint256) {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.memberCommuneId[member];
+    }
+
+    /// @notice Returns the username for a member
+    function memberUsername(address member) public view returns (string memory) {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.memberUsername[member];
+    }
+
+    /// @notice Returns whether a nonce has been used for a commune
+    function usedNonces(uint256 communeId, uint256 nonce) public view returns (bool) {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.usedNonces[communeId][nonce];
+    }
+
+    /// @notice Initializes the MemberRegistry
+    /// @param _communeOS Address of the main CommuneOS contract
+    function initialize(address _communeOS) external initializer {
+        __CommuneOSModule_init(_communeOS);
+    }
 
     /// @notice Validates an invite signature
     /// @param communeId ID of the commune being joined
@@ -34,7 +72,8 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
         external
         view
     {
-        if (usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        if ($.usedNonces[communeId][nonce]) revert NonceAlreadyUsed();
 
         // Create the message hash
         bytes32 messageHash = getMessageHash(communeId, nonce);
@@ -61,8 +100,9 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
         uint256 collateralAmount,
         string memory username
     ) external onlyCommuneOS {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
         // Mark nonce as used (validated in validateInvite, but must be marked here)
-        usedNonces[communeId][nonce] = true;
+        $.usedNonces[communeId][nonce] = true;
 
         // Register the member
         _registerMember(communeId, memberAddress, collateralAmount, username);
@@ -93,15 +133,16 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
         uint256 collateralAmount,
         string memory username
     ) internal {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
         if (memberAddress == address(0)) revert InvalidAddress();
-        if (memberCommuneId[memberAddress] != 0) revert AlreadyRegistered();
+        if ($.memberCommuneId[memberAddress] != 0) revert AlreadyRegistered();
 
         Member memory newMember =
             Member({walletAddress: memberAddress, communeId: communeId, active: true, username: username});
 
-        communeMembers[communeId].push(newMember);
-        memberCommuneId[memberAddress] = communeId;
-        memberUsername[memberAddress] = username;
+        $.communeMembers[communeId].push(newMember);
+        $.memberCommuneId[memberAddress] = communeId;
+        $.memberUsername[memberAddress] = username;
 
         emit MemberRegistered(memberAddress, communeId, collateralAmount, block.timestamp, username);
     }
@@ -112,7 +153,8 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @return bool True if address is an active member of the commune
     /// @dev Returns false if communeId is 0 to prevent false positives
     function isMember(uint256 communeId, address memberAddress) external view returns (bool) {
-        return memberCommuneId[memberAddress] == communeId && communeId != 0;
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.memberCommuneId[memberAddress] == communeId && communeId != 0;
     }
 
     /// @notice Batch checks if multiple addresses are members of a commune
@@ -121,9 +163,10 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @return results Array of booleans, true for each address that is a member
     /// @dev More gas-efficient than multiple isMember() calls
     function areMembers(uint256 communeId, address[] memory addresses) external view returns (bool[] memory results) {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
         results = new bool[](addresses.length);
         for (uint256 i = 0; i < addresses.length; i++) {
-            results[i] = memberCommuneId[addresses[i]] == communeId && communeId != 0;
+            results[i] = $.memberCommuneId[addresses[i]] == communeId && communeId != 0;
         }
         return results;
     }
@@ -133,7 +176,8 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @return address[] Array of member wallet addresses
     /// @dev Extracts addresses from Member structs for convenience
     function getCommuneMembers(uint256 communeId) external view returns (address[] memory) {
-        Member[] memory members = communeMembers[communeId];
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        Member[] memory members = $.communeMembers[communeId];
         address[] memory addresses = new address[](members.length);
         for (uint256 i = 0; i < members.length; i++) {
             addresses[i] = members[i].walletAddress;
@@ -146,7 +190,8 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @return uint256 Count of members
     /// @dev Simply returns the length of the members array
     function getMemberCount(uint256 communeId) external view returns (uint256) {
-        return communeMembers[communeId].length;
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.communeMembers[communeId].length;
     }
 
     /// @notice Retrieves full member data for an address
@@ -155,10 +200,11 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @dev Reverts if address is not registered to any commune
     /// @dev Searches linearly through commune's member array
     function getMemberStatus(address memberAddress) external view returns (Member memory) {
-        uint256 communeId = memberCommuneId[memberAddress];
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        uint256 communeId = $.memberCommuneId[memberAddress];
         if (communeId == 0) revert InvalidAddress();
 
-        Member[] memory members = communeMembers[communeId];
+        Member[] memory members = $.communeMembers[communeId];
         for (uint256 i = 0; i < members.length; i++) {
             if (members[i].walletAddress == memberAddress) {
                 return members[i];
@@ -172,7 +218,8 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @param nonce Nonce value to check
     /// @return bool True if nonce has been used, false otherwise
     function isNonceUsed(uint256 communeId, uint256 nonce) external view returns (bool) {
-        return usedNonces[communeId][nonce];
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
+        return $.usedNonces[communeId][nonce];
     }
 
     /// @notice Removes a member from a commune
@@ -182,8 +229,9 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
     /// @dev Caller validation happens in CommuneOS via onlyMember modifier
     /// @dev Idempotent - no-op if member doesn't exist
     function removeMember(uint256 communeId, address memberAddress) external onlyCommuneOS {
+        MemberRegistryStorage storage $ = _getMemberRegistryStorage();
         // Find and remove the member from the array using swap-and-pop
-        Member[] storage members = communeMembers[communeId];
+        Member[] storage members = $.communeMembers[communeId];
         for (uint256 i = 0; i < members.length; i++) {
             if (members[i].walletAddress == memberAddress) {
                 // Swap with last element and pop
@@ -191,7 +239,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
                 members.pop();
 
                 // Remove from memberCommuneId mapping
-                memberCommuneId[memberAddress] = 0;
+                $.memberCommuneId[memberAddress] = 0;
 
                 emit MemberRemoved(memberAddress, communeId, block.timestamp);
                 break;
