@@ -50,12 +50,7 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         address _collateralManager
     ) external initializer {
         __CommuneViewer_init(
-            _communeRegistry,
-            _memberRegistry,
-            _choreScheduler,
-            _taskManager,
-            _votingModule,
-            _collateralManager
+            _communeRegistry, _memberRegistry, _choreScheduler, _taskManager, _votingModule, _collateralManager
         );
     }
 

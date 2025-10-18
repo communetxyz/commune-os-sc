@@ -52,41 +52,23 @@ contract InviteGeneratorTest is Test {
         CommuneOS communeOSImpl = new CommuneOS();
 
         // Deploy proxies for module contracts
-        TransparentUpgradeableProxy communeRegistryProxy = new TransparentUpgradeableProxy(
-            address(communeRegistryImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy communeRegistryProxy =
+            new TransparentUpgradeableProxy(address(communeRegistryImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy memberRegistryProxy = new TransparentUpgradeableProxy(
-            address(memberRegistryImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy memberRegistryProxy =
+            new TransparentUpgradeableProxy(address(memberRegistryImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy choreSchedulerProxy = new TransparentUpgradeableProxy(
-            address(choreSchedulerImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy choreSchedulerProxy =
+            new TransparentUpgradeableProxy(address(choreSchedulerImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy taskManagerProxy = new TransparentUpgradeableProxy(
-            address(taskManagerImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy taskManagerProxy =
+            new TransparentUpgradeableProxy(address(taskManagerImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy votingModuleProxy = new TransparentUpgradeableProxy(
-            address(votingModuleImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy votingModuleProxy =
+            new TransparentUpgradeableProxy(address(votingModuleImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy collateralManagerProxy = new TransparentUpgradeableProxy(
-            address(collateralManagerImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy collateralManagerProxy =
+            new TransparentUpgradeableProxy(address(collateralManagerImpl), address(proxyAdmin), "");
 
         // Deploy CommuneOS proxy and initialize with module proxy addresses
         bytes memory communeOSInitData = abi.encodeWithSelector(
@@ -99,11 +81,8 @@ contract InviteGeneratorTest is Test {
             address(collateralManagerProxy)
         );
 
-        TransparentUpgradeableProxy communeOSProxy = new TransparentUpgradeableProxy(
-            address(communeOSImpl),
-            address(proxyAdmin),
-            communeOSInitData
-        );
+        TransparentUpgradeableProxy communeOSProxy =
+            new TransparentUpgradeableProxy(address(communeOSImpl), address(proxyAdmin), communeOSInitData);
 
         communeOS = CommuneOS(address(communeOSProxy));
 

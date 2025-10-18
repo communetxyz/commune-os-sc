@@ -63,41 +63,23 @@ contract DeployScript is Script {
         // Note: We need to initialize these with the CommuneOS proxy address, which we'll deploy next
         // For now, we deploy with empty initialization data and will initialize after CommuneOS proxy is deployed
 
-        TransparentUpgradeableProxy communeRegistryProxy = new TransparentUpgradeableProxy(
-            address(communeRegistryImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy communeRegistryProxy =
+            new TransparentUpgradeableProxy(address(communeRegistryImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy memberRegistryProxy = new TransparentUpgradeableProxy(
-            address(memberRegistryImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy memberRegistryProxy =
+            new TransparentUpgradeableProxy(address(memberRegistryImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy choreSchedulerProxy = new TransparentUpgradeableProxy(
-            address(choreSchedulerImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy choreSchedulerProxy =
+            new TransparentUpgradeableProxy(address(choreSchedulerImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy taskManagerProxy = new TransparentUpgradeableProxy(
-            address(taskManagerImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy taskManagerProxy =
+            new TransparentUpgradeableProxy(address(taskManagerImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy votingModuleProxy = new TransparentUpgradeableProxy(
-            address(votingModuleImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy votingModuleProxy =
+            new TransparentUpgradeableProxy(address(votingModuleImpl), address(proxyAdmin), "");
 
-        TransparentUpgradeableProxy collateralManagerProxy = new TransparentUpgradeableProxy(
-            address(collateralManagerImpl),
-            address(proxyAdmin),
-            ""
-        );
+        TransparentUpgradeableProxy collateralManagerProxy =
+            new TransparentUpgradeableProxy(address(collateralManagerImpl), address(proxyAdmin), "");
 
         // Deploy CommuneOS proxy and initialize with module proxy addresses
         bytes memory communeOSInitData = abi.encodeWithSelector(
@@ -110,11 +92,8 @@ contract DeployScript is Script {
             address(collateralManagerProxy)
         );
 
-        TransparentUpgradeableProxy communeOSProxy = new TransparentUpgradeableProxy(
-            address(communeOSImpl),
-            address(proxyAdmin),
-            communeOSInitData
-        );
+        TransparentUpgradeableProxy communeOSProxy =
+            new TransparentUpgradeableProxy(address(communeOSImpl), address(proxyAdmin), communeOSInitData);
 
         CommuneOS communeOS = CommuneOS(address(communeOSProxy));
 
