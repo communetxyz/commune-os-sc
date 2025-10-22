@@ -21,7 +21,7 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
 
     // keccak256(abi.encode(uint256(keccak256("commune.storage.ChoreScheduler")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant ChoreSchedulerStorageLocation =
-        0x4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a00;
+        0x495fab80d42960d0f87a226dc4bcc8e82e5cf5409358676c8fe88146902efc00;
 
     function _getChoreSchedulerStorage() private pure returns (ChoreSchedulerStorage storage $) {
         assembly {

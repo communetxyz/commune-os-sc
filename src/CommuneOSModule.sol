@@ -14,7 +14,7 @@ abstract contract CommuneOSModule is Initializable {
 
     // keccak256(abi.encode(uint256(keccak256("commune.storage.CommuneOSModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CommuneOSModuleStorageLocation =
-        0x8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c8b8c00;
+        0xbf39a5c790b1fce867fe2412a9572d8354be4ea217f6abe43c65cc436e3301e0;
 
     function _getCommuneOSModuleStorage() private pure returns (CommuneOSModuleStorage storage $) {
         assembly {

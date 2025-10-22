@@ -19,7 +19,7 @@ contract MemberRegistry is CommuneOSModule, IMemberRegistry {
 
     // keccak256(abi.encode(uint256(keccak256("commune.storage.MemberRegistry")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant MemberRegistryStorageLocation =
-        0x3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a00;
+        0x7239ccbda21190f7de1c2ea5e094f0f548510863d83d65805da07455eccd1dee;
 
     function _getMemberRegistryStorage() private pure returns (MemberRegistryStorage storage $) {
         assembly {

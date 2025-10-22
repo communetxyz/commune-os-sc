@@ -30,7 +30,7 @@ abstract contract CommuneViewer is Initializable {
 
     // keccak256(abi.encode(uint256(keccak256("commune.storage.CommuneViewer")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant CommuneViewerStorageLocation =
-        0x7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6f7a00;
+        0x3e788223fad069db4206a89abf8231a907fb1bb169cea1d2380e460762b1d1ab;
 
     function _getCommuneViewerStorage() private pure returns (CommuneViewerStorage storage $) {
         assembly {

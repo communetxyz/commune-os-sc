@@ -19,7 +19,7 @@ contract VotingModule is CommuneOSModule, IVotingModule {
 
     // keccak256(abi.encode(uint256(keccak256("commune.storage.VotingModule")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant VotingModuleStorageLocation =
-        0x6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a00;
+        0xd5e17fa913b16c3c1d3f96850169be4347adc814222ffecceda1a5c00e7c7f00;
 
     function _getVotingModuleStorage() private pure returns (VotingModuleStorage storage $) {
         assembly {

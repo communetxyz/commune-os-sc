@@ -18,7 +18,7 @@ contract TaskManager is CommuneOSModule, ITaskManager {
 
     // keccak256(abi.encode(uint256(keccak256("commune.storage.TaskManager")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant TaskManagerStorageLocation =
-        0x5a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a00;
+        0x45798fb8ae83a40547b48512fc3be65aac11d1e92af7cce964b899b5b936dc4d;
 
     function _getTaskManagerStorage() private pure returns (TaskManagerStorage storage $) {
         assembly {
