@@ -75,8 +75,6 @@ jobs:
         run: sleep 60
 
       - name: Verify contracts on Blockscout
-        env:
-          ARBISCAN_API_KEY: "blockscout"  # Dummy value - Blockscout doesn't need API key
         run: |
           # Get the exact compiler version metadata from the compiled artifact
           COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
