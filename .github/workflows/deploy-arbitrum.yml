@@ -48,6 +48,7 @@ jobs:
             --rpc-url $ARBITRUM_RPC_URL \
             --broadcast \
             --slow \
+            --with-gas-price 100000000 \
             -vvvv)
 
           echo "$DEPLOY_OUTPUT"
