@@ -3,37 +3,5 @@
   "chainId": 42161,
   "frontendUrl": "https://www.share-house.fun",
   "collateralToken": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
-  "collateralAmount": "0",
-  "chores": [
-    {
-      "title": "washing the dishes (soaping)",
-      "frequency": 86400,
-      "description": "daily"
-    },
-    {
-      "title": "washing the dishes (washing)",
-      "frequency": 86400,
-      "description": "daily"
-    },
-    {
-      "title": "washing the dishes (drying)",
-      "frequency": 86400,
-      "description": "daily"
-    },
-    {
-      "title": "tidying up the shower room and laundry area",
-      "frequency": 86400,
-      "description": "daily"
-    },
-    {
-      "title": "cleaning the upstairs food area",
-      "frequency": 86400,
-      "description": "daily"
-    },
-    {
-      "title": "cleaning the tables and floor after dinner",
-      "frequency": 86400,
-      "description": "every day"
-    }
-  ]
+  "collateralAmount": "0"
 }
