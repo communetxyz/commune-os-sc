@@ -49,6 +49,7 @@ jobs:
             --broadcast \
             --slow \
             --legacy \
+            --gas-price 20000000 \
             -vvvv)
 
           echo "$DEPLOY_OUTPUT"
