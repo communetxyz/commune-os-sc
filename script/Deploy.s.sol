@@ -3,8 +3,16 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Script.sol";
 import "../src/CommuneOS.sol";
+import "../src/CommuneRegistry.sol";
+import "../src/MemberRegistry.sol";
+import "../src/ChoreScheduler.sol";
+import "../src/TaskManager.sol";
+import "../src/VotingModule.sol";
+import "../src/CollateralManager.sol";
 import "../src/interfaces/ICommuneOS.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/proxy/transparent/TransparentUpgradeableProxy.sol";
+import "@openzeppelin/contracts/proxy/transparent/ProxyAdmin.sol";
 
 contract DeployScript is Script {
     function run() external {
@@ -29,16 +37,83 @@ contract DeployScript is Script {
 
         vm.startBroadcast(deployerPrivateKey);
 
-        // Deploy CommuneOS
-        CommuneOS communeOS = new CommuneOS(collateralToken);
+        // Deploy ProxyAdmin
+        ProxyAdmin proxyAdmin = new ProxyAdmin();
+        console.log("ProxyAdmin deployed to:", address(proxyAdmin));
 
-        console.log("CommuneOS deployed to:", address(communeOS));
-        console.log("CommuneRegistry:", address(communeOS.communeRegistry()));
-        console.log("MemberRegistry:", address(communeOS.memberRegistry()));
-        console.log("ChoreScheduler:", address(communeOS.choreScheduler()));
-        console.log("TaskManager:", address(communeOS.taskManager()));
-        console.log("VotingModule:", address(communeOS.votingModule()));
-        console.log("CollateralManager:", address(communeOS.collateralManager()));
+        // Deploy implementation contracts
+        CommuneRegistry communeRegistryImpl = new CommuneRegistry();
+        MemberRegistry memberRegistryImpl = new MemberRegistry();
+        ChoreScheduler choreSchedulerImpl = new ChoreScheduler();
+        TaskManager taskManagerImpl = new TaskManager();
+        VotingModule votingModuleImpl = new VotingModule();
+        CollateralManager collateralManagerImpl = new CollateralManager();
+        CommuneOS communeOSImpl = new CommuneOS();
+
+        console.log("Implementation contracts deployed:");
+        console.log("  CommuneRegistry:", address(communeRegistryImpl));
+        console.log("  MemberRegistry:", address(memberRegistryImpl));
+        console.log("  ChoreScheduler:", address(choreSchedulerImpl));
+        console.log("  TaskManager:", address(taskManagerImpl));
+        console.log("  VotingModule:", address(votingModuleImpl));
+        console.log("  CollateralManager:", address(collateralManagerImpl));
+        console.log("  CommuneOS:", address(communeOSImpl));
+
+        // Deploy proxies for module contracts
+        // Note: We need to initialize these with the CommuneOS proxy address, which we'll deploy next
+        // For now, we deploy with empty initialization data and will initialize after CommuneOS proxy is deployed
+
+        TransparentUpgradeableProxy communeRegistryProxy =
+            new TransparentUpgradeableProxy(address(communeRegistryImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy memberRegistryProxy =
+            new TransparentUpgradeableProxy(address(memberRegistryImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy choreSchedulerProxy =
+            new TransparentUpgradeableProxy(address(choreSchedulerImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy taskManagerProxy =
+            new TransparentUpgradeableProxy(address(taskManagerImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy votingModuleProxy =
+            new TransparentUpgradeableProxy(address(votingModuleImpl), address(proxyAdmin), "");
+
+        TransparentUpgradeableProxy collateralManagerProxy =
+            new TransparentUpgradeableProxy(address(collateralManagerImpl), address(proxyAdmin), "");
+
+        // Deploy CommuneOS proxy and initialize with module proxy addresses
+        bytes memory communeOSInitData = abi.encodeWithSelector(
+            CommuneOS.initialize.selector,
+            address(communeRegistryProxy),
+            address(memberRegistryProxy),
+            address(choreSchedulerProxy),
+            address(taskManagerProxy),
+            address(votingModuleProxy),
+            address(collateralManagerProxy)
+        );
+
+        TransparentUpgradeableProxy communeOSProxy =
+            new TransparentUpgradeableProxy(address(communeOSImpl), address(proxyAdmin), communeOSInitData);
+
+        CommuneOS communeOS = CommuneOS(address(communeOSProxy));
+
+        // Now initialize all module contracts with the CommuneOS proxy address
+        CommuneRegistry(address(communeRegistryProxy)).initialize(address(communeOSProxy));
+        MemberRegistry(address(memberRegistryProxy)).initialize(address(communeOSProxy));
+        ChoreScheduler(address(choreSchedulerProxy)).initialize(address(communeOSProxy));
+        TaskManager(address(taskManagerProxy)).initialize(address(communeOSProxy));
+        VotingModule(address(votingModuleProxy)).initialize(address(communeOSProxy));
+        CollateralManager(address(collateralManagerProxy)).initialize(address(communeOSProxy), collateralToken);
+
+        console.log("");
+        console.log("Proxy contracts deployed:");
+        console.log("  CommuneOS:", address(communeOSProxy));
+        console.log("  CommuneRegistry:", address(communeRegistryProxy));
+        console.log("  MemberRegistry:", address(memberRegistryProxy));
+        console.log("  ChoreScheduler:", address(choreSchedulerProxy));
+        console.log("  TaskManager:", address(taskManagerProxy));
+        console.log("  VotingModule:", address(votingModuleProxy));
+        console.log("  CollateralManager:", address(collateralManagerProxy));
 
         // Initialize commune if chores are provided
         if (bytes(choresJson).length > 0) {
