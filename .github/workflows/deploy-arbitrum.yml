@@ -1,0 +1,231 @@
+name: Deploy to Arbitrum
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-arbitrum:
+    name: Deploy to Arbitrum
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+
+      - name: Install dependencies
+        run: forge install
+
+      - name: Build contracts
+        run: |
+          forge clean
+          forge build
+
+      - name: Run tests
+        run: forge test -vvv
+
+      - name: Deploy CommuneOS
+        id: deploy
+        env:
+          PRIVATE_KEY: ${{ secrets.GNOSIS_PRIVATE_KEY }}
+          ARBITRUM_RPC_URL: ${{ secrets.ARBITRUM_RPC_URL }}
+          CONFIG_PATH: config/arbitrum.json
+        run: |
+          DEPLOY_OUTPUT=$(forge script script/Deploy.s.sol:DeployScript \
+            --rpc-url $ARBITRUM_RPC_URL \
+            --broadcast \
+            --slow \
+            --legacy \
+            --gas-price 20000000 \
+            -vvvv)
+
+          echo "$DEPLOY_OUTPUT"
+
+          # Extract contract addresses from deployment output
+          COMMUNE_OS=$(echo "$DEPLOY_OUTPUT" | grep "^  CommuneOS deployed to:" | awk '{print $NF}')
+          COMMUNE_REGISTRY=$(echo "$DEPLOY_OUTPUT" | grep "^  CommuneRegistry:" | awk '{print $NF}')
+          MEMBER_REGISTRY=$(echo "$DEPLOY_OUTPUT" | grep "^  MemberRegistry:" | awk '{print $NF}')
+          CHORE_SCHEDULER=$(echo "$DEPLOY_OUTPUT" | grep "^  ChoreScheduler:" | awk '{print $NF}')
+          TASK_MANAGER=$(echo "$DEPLOY_OUTPUT" | grep "^  TaskManager:" | awk '{print $NF}')
+          VOTING_MODULE=$(echo "$DEPLOY_OUTPUT" | grep "^  VotingModule:" | awk '{print $NF}')
+          COLLATERAL_MANAGER=$(echo "$DEPLOY_OUTPUT" | grep "^  CollateralManager:" | awk '{print $NF}')
+
+          echo "commune_os=$COMMUNE_OS" >> $GITHUB_OUTPUT
+          echo "commune_registry=$COMMUNE_REGISTRY" >> $GITHUB_OUTPUT
+          echo "member_registry=$MEMBER_REGISTRY" >> $GITHUB_OUTPUT
+          echo "chore_scheduler=$CHORE_SCHEDULER" >> $GITHUB_OUTPUT
+          echo "task_manager=$TASK_MANAGER" >> $GITHUB_OUTPUT
+          echo "voting_module=$VOTING_MODULE" >> $GITHUB_OUTPUT
+          echo "collateral_manager=$COLLATERAL_MANAGER" >> $GITHUB_OUTPUT
+
+          echo "Deployed CommuneOS to: $COMMUNE_OS"
+
+      - name: Wait for blockchain indexing
+        run: sleep 60
+
+      - name: Verify contracts on Blockscout
+        env:
+          GNOSISSCAN_API_KEY: "blockscout"
+        run: |
+          # Get the exact compiler version metadata from the compiled artifact
+          COMPILER_VERSION=$(cat out/CommuneOS.sol/CommuneOS.json | jq -r '.metadata.compiler.version')
+
+          # Read collateral token from config
+          COLLATERAL_TOKEN=$(jq -r '.collateralToken' config/arbitrum.json)
+
+          echo "Verifying CommuneOS..."
+          forge verify-contract \
+            ${{ steps.deploy.outputs.commune_os }} \
+            src/CommuneOS.sol:CommuneOS \
+            --chain-id 42161 \
+            --compiler-version "v${COMPILER_VERSION}" \
+            --num-of-optimizations 200 \
+            --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
+            --verifier blockscout \
+            --verifier-url https://arbitrum.blockscout.com/api \
+            --watch
+
+          sleep 10
+
+          echo "Verifying CollateralManager..."
+          forge verify-contract \
+            ${{ steps.deploy.outputs.collateral_manager }} \
+            src/CollateralManager.sol:CollateralManager \
+            --chain-id 42161 \
+            --compiler-version "v${COMPILER_VERSION}" \
+            --num-of-optimizations 200 \
+            --constructor-args $(cast abi-encode "constructor(address)" "$COLLATERAL_TOKEN") \
+            --verifier blockscout \
+            --verifier-url https://arbitrum.blockscout.com/api \
+            --watch
+
+          sleep 10
+
+          # Verify module contracts (no constructor args)
+          for contract in "CommuneRegistry" "MemberRegistry" "ChoreScheduler" "TaskManager" "VotingModule"; do
+            echo "Verifying $contract..."
+
+            # Get the address from outputs
+            if [ "$contract" = "CommuneRegistry" ]; then
+              ADDRESS="${{ steps.deploy.outputs.commune_registry }}"
+            elif [ "$contract" = "MemberRegistry" ]; then
+              ADDRESS="${{ steps.deploy.outputs.member_registry }}"
+            elif [ "$contract" = "ChoreScheduler" ]; then
+              ADDRESS="${{ steps.deploy.outputs.chore_scheduler }}"
+            elif [ "$contract" = "TaskManager" ]; then
+              ADDRESS="${{ steps.deploy.outputs.task_manager }}"
+            elif [ "$contract" = "VotingModule" ]; then
+              ADDRESS="${{ steps.deploy.outputs.voting_module }}"
+            fi
+
+            forge verify-contract \
+              $ADDRESS \
+              src/$contract.sol:$contract \
+              --chain-id 42161 \
+              --compiler-version "v${COMPILER_VERSION}" \
+              --num-of-optimizations 200 \
+              --verifier blockscout \
+              --verifier-url https://arbitrum.blockscout.com/api \
+              --watch
+
+            sleep 10
+          done
+
+          echo "Contract verification complete!"
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Arbitrum Mainnet Deployment" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Network:** Arbitrum" >> $GITHUB_STEP_SUMMARY
+          echo "**Chain ID:** 42161" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Deployed Contracts" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Contract | Address | Explorer |" >> $GITHUB_STEP_SUMMARY
+          echo "| --- | --- | --- |" >> $GITHUB_STEP_SUMMARY
+          echo "| CommuneOS | \`${{ steps.deploy.outputs.commune_os }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.commune_os }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| CommuneRegistry | \`${{ steps.deploy.outputs.commune_registry }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.commune_registry }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| MemberRegistry | \`${{ steps.deploy.outputs.member_registry }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.member_registry }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| ChoreScheduler | \`${{ steps.deploy.outputs.chore_scheduler }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.chore_scheduler }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| TaskManager | \`${{ steps.deploy.outputs.task_manager }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.task_manager }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| VotingModule | \`${{ steps.deploy.outputs.voting_module }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.voting_module }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "| CollateralManager | \`${{ steps.deploy.outputs.collateral_manager }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.collateral_manager }}) |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Time:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+      - name: Save deployment artifacts
+        run: |
+          mkdir -p deployments/arbitrum
+
+          cat > deployments/arbitrum/deployment.json << EOF
+          {
+            "network": "arbitrum",
+            "chainId": 42161,
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "deployer": "GitHub Actions",
+            "gitCommit": "${{ github.sha }}",
+            "contracts": {
+              "CommuneOS": "${{ steps.deploy.outputs.commune_os }}",
+              "CommuneRegistry": "${{ steps.deploy.outputs.commune_registry }}",
+              "MemberRegistry": "${{ steps.deploy.outputs.member_registry }}",
+              "ChoreScheduler": "${{ steps.deploy.outputs.chore_scheduler }}",
+              "TaskManager": "${{ steps.deploy.outputs.task_manager }}",
+              "VotingModule": "${{ steps.deploy.outputs.voting_module }}",
+              "CollateralManager": "${{ steps.deploy.outputs.collateral_manager }}"
+            }
+          }
+          EOF
+
+          cat deployments/arbitrum/deployment.json
+
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: arbitrum-deployment
+          path: deployments/arbitrum/
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const comment = `## 🚀 Arbitrum Deployment
+
+            **Network:** Arbitrum
+            **Chain ID:** 42161
+
+            ### Deployed Contracts
+
+            | Contract | Address | Explorer |
+            | --- | --- | --- |
+            | CommuneOS | \`${{ steps.deploy.outputs.commune_os }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.commune_os }}) |
+            | CommuneRegistry | \`${{ steps.deploy.outputs.commune_registry }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.commune_registry }}) |
+            | MemberRegistry | \`${{ steps.deploy.outputs.member_registry }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.member_registry }}) |
+            | ChoreScheduler | \`${{ steps.deploy.outputs.chore_scheduler }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.chore_scheduler }}) |
+            | TaskManager | \`${{ steps.deploy.outputs.task_manager }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.task_manager }}) |
+            | VotingModule | \`${{ steps.deploy.outputs.voting_module }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.voting_module }}) |
+            | CollateralManager | \`${{ steps.deploy.outputs.collateral_manager }}\` | [View](https://arbitrum.blockscout.com/address/${{ steps.deploy.outputs.collateral_manager }}) |
+
+            **Deployment Time:** ${new Date().toISOString()}
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });

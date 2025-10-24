@@ -1,0 +1,7 @@
+{
+  "network": "arbitrum",
+  "chainId": 42161,
+  "frontendUrl": "https://www.share-house.fun",
+  "collateralToken": "0xaf88d065e77c8cC2239327C5EDb3A432268e5831",
+  "collateralAmount": "0"
+}
