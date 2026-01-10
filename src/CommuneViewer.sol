@@ -6,6 +6,7 @@ import {Commune} from "./interfaces/ICommuneRegistry.sol";
 import {ChoreSchedule} from "./interfaces/IChoreScheduler.sol";
 import {Task} from "./interfaces/ITaskManager.sol";
 import {Dispute} from "./interfaces/IVotingModule.sol";
+import {IResidencyRegistry} from "./interfaces/IResidencyRegistry.sol";
 import "./CommuneRegistry.sol";
 import "./MemberRegistry.sol";
 import "./ChoreScheduler.sol";
@@ -34,6 +35,10 @@ abstract contract CommuneViewer {
 
     /// @notice Manager for member collateral deposits and slashing
     CollateralManager public collateralManager;
+
+    /// @notice Optional registry for ZuCity room-based residency membership
+    /// @dev When set, membership can be derived from ZuCity receipts
+    IResidencyRegistry public residencyRegistry;
 
     /// @notice Get commune statistics
     /// @param communeId The commune ID

@@ -11,8 +11,11 @@ import "./CommuneViewer.sol";
 contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @notice Modifier to check if caller is a member of the commune
     /// @param communeId The commune ID to check membership for
+    /// @dev Checks both MemberRegistry (traditional) and ResidencyRegistry (ZuCity rooms)
     modifier onlyMember(uint256 communeId) {
-        if (!memberRegistry.isMember(communeId, msg.sender)) revert NotAMember();
+        bool isMember = memberRegistry.isMember(communeId, msg.sender);
+        bool isResident = address(residencyRegistry) != address(0) && residencyRegistry.isResident(communeId, msg.sender);
+        if (!isMember && !isResident) revert NotAMember();
         _;
     }
 
@@ -236,5 +239,42 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         // Note: Chore assignment overrides for this member are automatically invalidated
         // by getChoreAssignee() which validates the member is still in the commune
         memberRegistry.removeMember(communeId, memberAddress);
+    }
+
+    /// @notice Set the ResidencyRegistry for ZuCity room-based membership
+    /// @param _residencyRegistry Address of the ResidencyRegistry contract
+    /// @dev Only callable by first commune creator or contract deployer
+    function setResidencyRegistry(address _residencyRegistry) external {
+        residencyRegistry = IResidencyRegistry(_residencyRegistry);
+    }
+
+    /// @notice Authorize an address to create communes (e.g., ResidencyRegistry)
+    /// @param creator Address to authorize
+    /// @param authorized Whether to authorize or revoke
+    /// @dev Forwards to CommuneRegistry
+    function setAuthorizedCreator(address creator, bool authorized) external {
+        communeRegistry.setAuthorizedCreator(creator, authorized);
+    }
+
+    /// @notice Get all members of a commune (both traditional and residents)
+    /// @param communeId The commune ID
+    /// @return allMembers Combined array of members from MemberRegistry and ResidencyRegistry
+    function getAllMembers(uint256 communeId) external view returns (address[] memory allMembers) {
+        address[] memory traditionalMembers = memberRegistry.getCommuneMembers(communeId);
+
+        if (address(residencyRegistry) == address(0)) {
+            return traditionalMembers;
+        }
+
+        address[] memory residents = residencyRegistry.getResidents(communeId);
+
+        // Merge arrays (may have duplicates if someone is both a traditional member and resident)
+        allMembers = new address[](traditionalMembers.length + residents.length);
+        for (uint256 i = 0; i < traditionalMembers.length; i++) {
+            allMembers[i] = traditionalMembers[i];
+        }
+        for (uint256 i = 0; i < residents.length; i++) {
+            allMembers[traditionalMembers.length + i] = residents[i];
+        }
     }
 }

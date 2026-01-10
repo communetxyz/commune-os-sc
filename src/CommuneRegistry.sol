@@ -20,6 +20,19 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @dev Starts at 1 so 0 can be used as a sentinel value for "not a member"
     uint256 public communeCount = 1;
 
+    /// @notice Tracks addresses authorized to create communes (e.g., ResidencyRegistry)
+    /// @dev Maps address => authorized status
+    mapping(address => bool) public authorizedCreators;
+
+    /// @notice Set an address as an authorized commune creator
+    /// @param creator Address to authorize or deauthorize
+    /// @param authorized Whether the address should be authorized
+    /// @dev Only CommuneOS can call this function
+    function setAuthorizedCreator(address creator, bool authorized) external onlyCommuneOS {
+        authorizedCreators[creator] = authorized;
+        emit AuthorizedCreatorSet(creator, authorized);
+    }
+
     /// @notice Creates a new commune with specified configuration
     /// @param name Human-readable name for the commune
     /// @param creator Address that will be able to issue invites
@@ -27,11 +40,12 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @param collateralAmount Amount of collateral required (ignored if collateralRequired is false)
     /// @return communeId Unique identifier for the newly created commune
     /// @dev Reverts if name is empty, creator is zero address, or collateralAmount is 0 when collateral is required
+    /// @dev Can be called by CommuneOS or authorized creators (e.g., ResidencyRegistry)
     function createCommune(string memory name, address creator, bool collateralRequired, uint256 collateralAmount)
         external
-        onlyCommuneOS
         returns (uint256 communeId)
     {
+        if (msg.sender != communeOS && !authorizedCreators[msg.sender]) revert Unauthorized();
         if (bytes(name).length == 0) revert EmptyName();
         if (creator == address(0)) revert InvalidCreator();
         if (collateralRequired && collateralAmount == 0) revert InvalidCollateralAmount();

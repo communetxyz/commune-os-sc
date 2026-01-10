@@ -41,4 +41,10 @@ interface ICommuneOS {
     function removeMember(uint256 communeId, address memberAddress) external;
 
     function setChoreAssignee(uint256 communeId, uint256 choreId, uint256 period, address assignee) external;
+
+    function setResidencyRegistry(address _residencyRegistry) external;
+
+    function setAuthorizedCreator(address creator, bool authorized) external;
+
+    function getAllMembers(uint256 communeId) external view returns (address[] memory);
 }
