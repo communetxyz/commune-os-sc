@@ -10,7 +10,9 @@ fs_permissions = [
     { access = "write", path = "./invites" }
 ]
 remappings = [
-    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "solady/=lib/solady/src/",
+    "zucity-contracts/=lib/zucity-contracts/zucity-contracts/src/"
 ]
 
 [rpc_endpoints]

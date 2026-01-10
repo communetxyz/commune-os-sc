@@ -27,6 +27,7 @@ interface ICommuneRegistry {
         bool collateralRequired,
         uint256 collateralAmount
     );
+    event AuthorizedCreatorSet(address indexed creator, bool authorized);
 
     // Errors
     error EmptyName();
@@ -40,6 +41,8 @@ interface ICommuneRegistry {
     function createCommune(string memory name, address creator, bool collateralRequired, uint256 collateralAmount)
         external
         returns (uint256 communeId);
+
+    function setAuthorizedCreator(address creator, bool authorized) external;
 
     function validateInvite(uint256 communeId, uint256 nonce, bytes memory signature) external view returns (bool);
 
