@@ -6,10 +6,25 @@ import "./interfaces/IChoreScheduler.sol";
 import "./interfaces/IMemberRegistry.sol";
 import "./CommuneOSModule.sol";
 
+/// @notice Storage for member registry reference
+/// @dev Allows chore scheduler to validate assignee overrides
+abstract contract ChoreSchedulerStorage is CommuneOSModule {
+    /// @notice Reference to member registry for validation
+    IMemberRegistry public memberRegistry;
+
+    /// @notice Initialize the member registry reference
+    /// @param _memberRegistry Address of the member registry contract
+    /// @dev Can only be called once by CommuneOS during initialization
+    function setMemberRegistry(IMemberRegistry _memberRegistry) external onlyCommuneOS {
+        require(address(memberRegistry) == address(0), "Already initialized");
+        memberRegistry = _memberRegistry;
+    }
+}
+
 /// @title ChoreScheduler
 /// @notice Manages chore schedules and completions without storing instances
 /// @dev Uses period-based completion tracking for O(1) storage per completion
-contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
+contract ChoreScheduler is ChoreSchedulerStorage, IChoreScheduler {
     /// @notice Stores all active chore schedules for each commune in an array
     /// @dev Maps commune ID => array of ChoreSchedule structs (can be popped when removed)
     mapping(uint256 => ChoreSchedule[]) public choreSchedules;
@@ -178,6 +193,12 @@ contract ChoreScheduler is CommuneOSModule, IChoreScheduler {
         onlyCommuneOS
     {
         _getValidChore(communeId, choreId);
+
+        // If assignee is not address(0), validate they are a member
+        if (assignee != address(0) && !memberRegistry.isMember(communeId, assignee)) {
+            revert InvalidAssignee();
+        }
+
         choreAssigneeOverrides[communeId][choreId][period] = assignee;
         emit ChoreAssigneeSet(communeId, choreId, assignee);
     }

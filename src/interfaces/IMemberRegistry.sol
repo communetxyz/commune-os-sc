@@ -32,6 +32,7 @@ interface IMemberRegistry {
     error InvalidInvite();
     error NonceAlreadyUsed();
     error InvalidSignatureLength();
+    error InvalidSignature();
     error NotAMember();
 
     // Functions

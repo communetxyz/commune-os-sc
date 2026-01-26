@@ -23,7 +23,7 @@ struct ChoreSchedule {
 interface IChoreScheduler {
     // Events
     event ChoreCreated(uint256 indexed communeId, uint256 indexed choreId, string title);
-    event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 period, uint256 timestamp);
+    event ChoreCompleted(uint256 indexed communeId, uint256 indexed choreId, uint256 indexed period, uint256 timestamp);
     event ChoreAssigneeSet(uint256 indexed communeId, uint256 indexed choreId, address indexed assignee);
     event ChoreRemoved(uint256 indexed communeId, uint256 indexed choreId);
 
@@ -35,6 +35,7 @@ interface IChoreScheduler {
     error AlreadyCompleted();
     error InvalidStartTime();
     error NoMembers();
+    error InvalidAssignee();
 
     // Functions
     function addChores(uint256 communeId, ChoreSchedule[] memory schedules) external;

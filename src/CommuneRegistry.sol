@@ -119,10 +119,20 @@ contract CommuneRegistry is CommuneOSModule, ICommuneRegistry {
     /// @param ethSignedMessageHash EIP-191 formatted message hash
     /// @param signature 65-byte ECDSA signature
     /// @return address Address that created the signature
-    /// @dev Uses ecrecover precompile
+    /// @dev Uses ecrecover precompile with malleability protection
     function recoverSigner(bytes32 ethSignedMessageHash, bytes memory signature) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
-        return ecrecover(ethSignedMessageHash, v, r, s);
+
+        // Protect against signature malleability (EIP-2)
+        // s must be in lower half order to prevent malleability
+        if (uint256(s) > 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0) {
+            revert InvalidSignature();
+        }
+
+        address signer = ecrecover(ethSignedMessageHash, v, r, s);
+        if (signer == address(0)) revert InvalidSignature();
+
+        return signer;
     }
 
     /// @notice Splits a signature into its r, s, v components

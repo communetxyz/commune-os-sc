@@ -7,6 +7,7 @@ interface ICommuneOS {
     // Errors
     error InsufficientCollateral();
     error NotAMember();
+    error NotCreator();
 
     // Functions
     function createCommune(

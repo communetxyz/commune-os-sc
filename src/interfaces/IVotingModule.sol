@@ -27,7 +27,7 @@ struct Dispute {
 /// @notice Interface for managing voting on task disputes
 interface IVotingModule {
     // Events
-    event DisputeCreated(uint256 indexed disputeId, uint256 indexed taskId, address proposedNewAssignee);
+    event DisputeCreated(uint256 indexed disputeId, uint256 indexed taskId, address indexed proposedNewAssignee);
     event VoteCast(uint256 indexed disputeId, address indexed voter, bool support);
     event DisputeResolved(uint256 indexed disputeId, bool upheld);
 

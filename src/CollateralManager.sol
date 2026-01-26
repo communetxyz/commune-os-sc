@@ -3,13 +3,14 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./interfaces/ICollateralManager.sol";
 import "./CommuneOSModule.sol";
 
 /// @title CollateralManager
 /// @notice Manages collateral deposits and slashing (no withdrawals)
-/// @dev Supports ERC20 tokens for collateral
-contract CollateralManager is CommuneOSModule, ICollateralManager {
+/// @dev Supports ERC20 tokens for collateral with reentrancy protection
+contract CollateralManager is CommuneOSModule, ReentrancyGuard, ICollateralManager {
     using SafeERC20 for IERC20;
 
     /// @notice The ERC20 token contract used for collateral
@@ -32,8 +33,8 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @notice Deposit collateral for a member
     /// @param member The member address
     /// @param amount The amount to deposit
-    /// @dev Uses safeTransferFrom to pull ERC20 tokens from member
-    function depositCollateral(address member, uint256 amount) external onlyCommuneOS {
+    /// @dev Uses safeTransferFrom to pull ERC20 tokens from member with reentrancy protection
+    function depositCollateral(address member, uint256 amount) external onlyCommuneOS nonReentrant {
         if (amount == 0) revert InvalidDepositAmount();
 
         // ERC20 token transfer using SafeERC20
@@ -47,8 +48,8 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
     /// @param member The member to slash from
     /// @param amount The amount to slash
     /// @param recipient The recipient of slashed funds
-    /// @dev Uses checks-effects-interactions pattern with SafeERC20 to prevent reentrancy
-    function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS {
+    /// @dev Uses checks-effects-interactions pattern with SafeERC20 and reentrancy guard
+    function slashCollateral(address member, uint256 amount, address recipient) external onlyCommuneOS nonReentrant {
         // Checks
         if (collateralBalance[member] < amount) revert InsufficientCollateral();
 
@@ -78,8 +79,8 @@ contract CollateralManager is CommuneOSModule, ICollateralManager {
 
     /// @notice Withdraw all remaining collateral for a member
     /// @param member The member address
-    /// @dev Uses checks-effects-interactions pattern with SafeERC20 to prevent reentrancy
-    function withdrawCollateral(address member) external onlyCommuneOS {
+    /// @dev Uses checks-effects-interactions pattern with SafeERC20 and reentrancy guard
+    function withdrawCollateral(address member) external onlyCommuneOS nonReentrant {
         // Get the full balance
         uint256 amount = collateralBalance[member];
 

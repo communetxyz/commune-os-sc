@@ -35,6 +35,7 @@ interface ICommuneRegistry {
     error InvalidCommuneId();
     error NonceAlreadyUsed();
     error InvalidSignatureLength();
+    error InvalidSignature();
 
     // Functions
     function createCommune(string memory name, address creator, bool collateralRequired, uint256 collateralAmount)

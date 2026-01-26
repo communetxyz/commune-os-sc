@@ -16,6 +16,14 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         _;
     }
 
+    /// @notice Modifier to check if caller is the commune creator
+    /// @param communeId The commune ID to check creator for
+    modifier onlyCreator(uint256 communeId) {
+        Commune memory commune = communeRegistry.getCommune(communeId);
+        if (commune.creator != msg.sender) revert NotCreator();
+        _;
+    }
+
     /// @notice Modifier to check if both caller and another address are members
     /// @param communeId The commune ID to check membership for
     /// @param otherAddress The other address to check
@@ -38,6 +46,9 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         taskManager = new TaskManager();
         votingModule = new VotingModule();
         collateralManager = new CollateralManager(collateralToken);
+
+        // Set memberRegistry reference in choreScheduler for validation
+        choreScheduler.setMemberRegistry(memberRegistry);
     }
 
     /// @notice Create a new commune with initial chore schedules
@@ -221,8 +232,8 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
     /// @notice Remove a member from a commune
     /// @param communeId The commune ID
     /// @param memberAddress Address of the member to remove
-    /// @dev Caller must be a member of the commune. Withdraws all collateral. Chore assignments are automatically invalidated.
-    function removeMember(uint256 communeId, address memberAddress) external onlyMember(communeId) {
+    /// @dev Caller must be the commune creator. Withdraws all collateral. Chore assignments are automatically invalidated.
+    function removeMember(uint256 communeId, address memberAddress) external onlyCreator(communeId) {
         // Withdraw all collateral (if any exists)
         collateralManager.withdrawCollateral(memberAddress);
 
