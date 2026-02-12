@@ -77,7 +77,8 @@ contract VotingModule is CommuneOSModule, IVotingModule {
         emit VoteCast(disputeId, voter, support);
 
         // Check if 2/3 majority has been reached (either for or against)
-        uint256 requiredVotes = (totalMembers * 2) / 3;
+        // Use ceiling division to prevent truncation in small communes
+        uint256 requiredVotes = (totalMembers * 2 + 2) / 3;
 
         if (dispute.votesFor >= requiredVotes) {
             // 2/3 voted in favor - dispute is upheld
