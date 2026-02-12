@@ -222,7 +222,7 @@ contract CommuneOSTest is Test {
         uint256 disputeId = communeOS.disputeTask(communeId, taskId, member3);
         vm.stopPrank();
 
-        // Members vote on dispute - need 2/3 majority (4 members total, so 2 votes needed)
+        // Members vote on dispute - need ceil(4*2/3) = 3 votes (ceiling division fix)
         vm.prank(creator);
         communeOS.voteOnDispute(communeId, disputeId, true);
 
@@ -234,11 +234,18 @@ contract CommuneOSTest is Test {
         vm.prank(member2);
         communeOS.voteOnDispute(communeId, disputeId, true);
 
-        // After 2nd vote, 2/3 majority is reached and dispute auto-resolves
+        // After 2nd vote, still pending (need 3 with ceiling division)
+        Dispute memory disputeAfterVote2 = communeOS.votingModule().getDispute(disputeId);
+        assertTrue(disputeAfterVote2.status == DisputeStatus.Pending);
+
+        vm.prank(member3);
+        communeOS.voteOnDispute(communeId, disputeId, true);
+
+        // After 3rd vote, 2/3 majority is reached and dispute auto-resolves
         Dispute memory dispute = communeOS.votingModule().getDispute(disputeId);
         assertEq(dispute.taskId, taskId);
         assertEq(dispute.proposedNewAssignee, member3);
-        assertEq(dispute.votesFor, 2); // creator and member2 voted for
+        assertEq(dispute.votesFor, 3); // creator, member2, member3 voted for
         assertEq(dispute.votesAgainst, 0);
         assertTrue(dispute.status == DisputeStatus.Upheld); // Dispute was upheld
 

@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "./interfaces/ICommuneOS.sol";
 import {DisputeStatus, Dispute} from "./interfaces/IVotingModule.sol";
+import {GuestPolicy} from "./interfaces/IGuestManager.sol";
 import "./CommuneViewer.sol";
 
 /// @title CommuneOS
@@ -38,6 +39,9 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
         taskManager = new TaskManager();
         votingModule = new VotingModule();
         collateralManager = new CollateralManager(collateralToken);
+        expenseManager = new ExpenseManager();
+        guestManager = new GuestManager();
+        messageBoard = new MessageBoard();
     }
 
     /// @notice Create a new commune with initial chore schedules
@@ -203,6 +207,103 @@ contract CommuneOS is CommuneViewer, ICommuneOS {
             // Create a new task as a copy for the new assignee
             taskManager.createTask(task.communeId, task.budget, task.description, task.dueDate, newAssignee);
         }
+    }
+
+    /// @notice Create an expense without an amount
+    function createExpense(uint256 communeId, string memory description, address[] memory assignedTo)
+        external
+        onlyMember(communeId)
+        returns (uint256)
+    {
+        return expenseManager.createExpense(communeId, description, assignedTo);
+    }
+
+    /// @notice Create an expense with an amount
+    function createExpenseWithAmount(
+        uint256 communeId,
+        string memory description,
+        uint256 amount,
+        address[] memory assignedTo
+    ) external onlyMember(communeId) returns (uint256) {
+        return expenseManager.createExpenseWithAmount(communeId, description, amount, assignedTo);
+    }
+
+    /// @notice Set or update the amount on an expense
+    function setExpenseAmount(uint256 expenseId, uint256 amount) external {
+        expenseManager.setExpenseAmount(expenseId, amount);
+    }
+
+    /// @notice Mark an expense as paid
+    function markExpensePaid(uint256 expenseId) external {
+        expenseManager.markExpensePaid(expenseId);
+    }
+
+    // ============ Guest Management ============
+
+    function createGuestInvite(uint256 communeId, string memory guestName, uint256 arrival, uint256 departure, string memory reason)
+        external onlyMember(communeId) returns (uint256)
+    {
+        return guestManager.createGuestInvite(communeId, guestName, arrival, departure, reason);
+    }
+
+    function approveGuest(uint256 communeId, uint256 inviteId) external onlyMember(communeId) {
+        guestManager.approveGuest(inviteId);
+    }
+
+    function cancelGuestInvite(uint256 communeId, uint256 inviteId) external onlyMember(communeId) {
+        guestManager.cancelInvite(inviteId);
+    }
+
+    function checkInGuest(uint256 communeId, uint256 inviteId) external onlyMember(communeId) {
+        guestManager.checkInGuest(inviteId);
+    }
+
+    function checkOutGuest(uint256 communeId, uint256 inviteId) external onlyMember(communeId) {
+        guestManager.checkOutGuest(inviteId);
+    }
+
+    function extendGuestStay(uint256 communeId, uint256 inviteId, uint256 newDeparture) external onlyMember(communeId) {
+        guestManager.extendStay(inviteId, newDeparture);
+    }
+
+    function updateGuestPolicy(uint256 communeId, GuestPolicy memory policy) external {
+        Commune memory commune = communeRegistry.getCommune(communeId);
+        if (msg.sender != commune.creator) revert NotCreator();
+        guestManager.updateGuestPolicy(communeId, policy);
+    }
+
+    // ============ Message Board ============
+
+    function postMessage(uint256 communeId, string memory content) external onlyMember(communeId) returns (uint256) {
+        return messageBoard.postMessage(communeId, content, msg.sender);
+    }
+
+    function postMessageIPFS(uint256 communeId, bytes32 ipfsHash) external onlyMember(communeId) returns (uint256) {
+        return messageBoard.postMessageIPFS(communeId, ipfsHash, msg.sender);
+    }
+
+    function replyToMessage(uint256 communeId, uint256 parentId, string memory content) external onlyMember(communeId) returns (uint256) {
+        return messageBoard.replyToMessage(parentId, content, msg.sender);
+    }
+
+    function editMessage(uint256 communeId, uint256 messageId, string memory newContent) external onlyMember(communeId) {
+        messageBoard.editMessage(messageId, newContent, msg.sender);
+    }
+
+    function deleteMessage(uint256 communeId, uint256 messageId) external onlyMember(communeId) {
+        messageBoard.deleteMessage(messageId, msg.sender);
+    }
+
+    function pinMessage(uint256 communeId, uint256 messageId) external {
+        Commune memory commune = communeRegistry.getCommune(communeId);
+        if (msg.sender != commune.creator) revert NotCreator();
+        messageBoard.pinMessage(messageId);
+    }
+
+    function unpinMessage(uint256 communeId, uint256 messageId) external {
+        Commune memory commune = communeRegistry.getCommune(communeId);
+        if (msg.sender != commune.creator) revert NotCreator();
+        messageBoard.unpinMessage(messageId);
     }
 
     /// @notice Set an assignee override for a specific chore period

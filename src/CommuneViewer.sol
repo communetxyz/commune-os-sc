@@ -12,6 +12,9 @@ import "./ChoreScheduler.sol";
 import "./TaskManager.sol";
 import "./VotingModule.sol";
 import "./CollateralManager.sol";
+import "./ExpenseManager.sol";
+import "./GuestManager.sol";
+import "./MessageBoard.sol";
 
 /// @title CommuneViewer
 /// @notice Provides comprehensive view functions for querying commune data
@@ -34,6 +37,15 @@ abstract contract CommuneViewer {
 
     /// @notice Manager for member collateral deposits and slashing
     CollateralManager public collateralManager;
+
+    /// @notice Manager for shared expenses
+    ExpenseManager public expenseManager;
+
+    /// @notice Manager for guest invitations
+    GuestManager public guestManager;
+
+    /// @notice On-chain message board
+    MessageBoard public messageBoard;
 
     /// @notice Get commune statistics
     /// @param communeId The commune ID
@@ -287,26 +299,15 @@ abstract contract CommuneViewer {
             }
         }
 
-        // Collect disputes
+        // Collect disputes using task->dispute mapping from TaskManager
         disputes = new Dispute[](disputeCount);
         uint256 index = 0;
 
-        // Try to get dispute for each task ID
         for (uint256 i = 0; i < tasks.length; i++) {
             if (tasks[i].disputed && index < disputeCount) {
-                // Search for the dispute by trying sequential IDs
-                // This is a workaround since we don't have task->dispute mapping
-                for (uint256 disputeId = 1; disputeId <= 1000; disputeId++) {
-                    try votingModule.getDispute(disputeId) returns (Dispute memory dispute) {
-                        if (dispute.taskId == tasks[i].id) {
-                            disputes[index] = dispute;
-                            index++;
-                            break;
-                        }
-                    } catch {
-                        break;
-                    }
-                }
+                uint256 disputeId = taskManager.taskDisputes(tasks[i].id);
+                disputes[index] = votingModule.getDispute(disputeId);
+                index++;
             }
         }
 
